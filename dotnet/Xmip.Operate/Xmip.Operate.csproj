@@ -1,0 +1,85 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Operate model: what every .NET operator surface calls the runtime
+    through, once — the library loaded (NativeRuntime), each section of
+    include/xmip_operate.h called (RuntimeRules, RuntimeAudit, RuntimeEvents
+    and their kin), and the records, publications and remote nodes their
+    answers are read into. It calls through the declarations Xmip.Abi in
+    xmip-core-abi binds (ADR-0014, amendment of 2026-09-09): the binding is a
+    definition and has no verb (ADR-0058, clause 1; ADR-0052, amendment
+    2026-11-16). Xmip.Surface builds on this, and the cli, the PowerShell
+    module and the GUI on both.
+
+    Target framework and the rest come from Directory.Build.props.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Xmip.Operate</RootNamespace>
+    <AssemblyName>Xmip.Operate</AssemblyName>
+
+    <!-- It calls the runtime's exports through function pointers. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <!-- C# 15's updated memory safety rules, a preview (adopted until the
+         first Linear release): a pointer type is safe to name and pass; only
+         a dereference and a call through a function pointer need an unsafe
+         block, and a member whose safety rests on its caller is marked
+         unsafe, so its caller needs one too. The binding's own rules. -->
+    <LangVersion>preview</LangVersion>
+    <Features>$(Features);updated-memory-safety-rules</Features>
+    <!-- IDE0380 ("'unsafe' modifier is unnecessary") flags a member whose
+         body is all in unsafe blocks, where the modifier now says its caller
+         needs one; removing it drops that promise silently. Xmip.Abi says
+         why, and when this line goes. -->
+    <NoWarn>$(NoWarn);IDE0380</NoWarn>
+
+    <!-- The cli publishes ahead-of-time. A model it carries must not need
+         anything the trimmer removes, and this asks the analyzers to say so. -->
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The C ABI, bound once. A sibling in the estate, not vendored: the
+         path is the estate's layout, five levels up from this project. -->
+    <ProjectReference Include="..\..\..\..\..\foundation\abi\dotnet\Xmip.Abi\Xmip.Abi.csproj" />
+  </ItemGroup>
+
+  <!-- The load rule's platform choice is internal: only NativeRuntime makes
+       it, and its test proves each platform's way. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Xmip.Operate.Test" />
+  </ItemGroup>
+
+  <!--
+    The runtime this calls, beside whatever references it: the library
+    `cargo build` leaves for this repository's Rust crate, xmip_core_operate,
+    copied into the output of every project that references this one — the
+    cli, the PowerShell module, the GUI hosts and every test project — so the
+    one discovery rule's last resort, beside the executable (RuntimeLibrary in
+    Xmip.Surface), finds it. Section 7's rules are called in that library,
+    never written here (ADR-0052, amendment 2026-09-24). Before any cargo
+    build the glob matches nothing and nothing is copied; a deployment puts
+    its own runtime beside it. Where CARGO_TARGET_DIR names the estate's one
+    shared build directory (Publish-XmipChange sets it), the library is read
+    from there. Unset, the estate's shared directory is still the one read
+    where it exists, before this repository's own target: every landing
+    builds into the shared one, so the own target/debug holds whatever an
+    older plain `cargo build` left, and a console importing the estate module
+    built against that stale copy (the owner's console, 2026-10-13).
+  -->
+  <PropertyGroup>
+    <XmipEstateBuild>$(MSBuildThisFileDirectory)../../../../../../.ai-interaction/target-windows/debug</XmipEstateBuild>
+    <XmipRuntimeBuild Condition="'$(CARGO_TARGET_DIR)' != ''">$(CARGO_TARGET_DIR)/debug</XmipRuntimeBuild>
+    <XmipRuntimeBuild Condition="'$(CARGO_TARGET_DIR)' == '' And Exists('$(XmipEstateBuild)')">$(XmipEstateBuild)</XmipRuntimeBuild>
+    <XmipRuntimeBuild Condition="'$(XmipRuntimeBuild)' == ''">$(MSBuildThisFileDirectory)../../target/debug</XmipRuntimeBuild>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(XmipRuntimeBuild)/*xmip_core_operate.*"
+          Exclude="$(XmipRuntimeBuild)/*.rlib;$(XmipRuntimeBuild)/*.d;$(XmipRuntimeBuild)/*.pdb;$(XmipRuntimeBuild)/*.exp;$(XmipRuntimeBuild)/*.lib"
+          Link="%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Visible="false" />
+  </ItemGroup>
+
+</Project>

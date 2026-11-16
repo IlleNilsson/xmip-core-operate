@@ -1,45 +1,155 @@
 # Its own workspace root, so this repository builds on its own.
-#
-# Every module repository carries this and the template did not, which stopped
-# mattering the moment the template stopped sitting beside the estate: nested at
-# template/rust, cargo walked up, found the root workspace and refused to build.
-#
-# It would have bitten a generated repository the same way. A template that does
-# not obey the estate's rules produces repositories that start out breaking
-# them — doc/governance/rust-style.md section 4.
 [workspace]
 
 [package]
-name = "xmip-template-rust"
+name = "xmip-core-operate"
 version = "0.1.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/IlleNilsson/xmip-template-rust"
-description = "Starter template for a Rust Xmip module repository."
+repository = "https://github.com/IlleNilsson/xmip-core-operate"
+description = "What every operator surface calls, implemented once: the C ABI's operating exports over the runtime, xmip_operate.h, in the native library the surfaces load, and the designer's view and edits of cluster.xmip."
 publish = false
 
 [lib]
 path = "src/lib.rs"
+# rlib for the estate, cdylib for the surfaces. ADR-0014: the xmip executable,
+# the PowerShell module and the GUI are .NET and P/Invoke a C ABI, so there
+# has to be a native library that exports xmip_operate_v1 for them to load.
+# This is it.
+crate-type = ["rlib", "cdylib"]
 
 [lints.rust]
-# forbid, not deny: a module has no business writing unsafe. The one exception
-# in the estate is xmip-core-abi, which holds the extern "C" vtable over
-# include/xmip_module.h and lowers this to deny with a reason at the call site.
-unsafe_code = "forbid"
+# deny, not forbid, because forbid cannot be lowered anywhere. The C boundary
+# is one folder, src/ffi/ (ADR-0050, amendment 2026-11-16): the operator's
+# table and the exports of xmip_operate.h (ADR-0027). Each file there allows
+# unsafe at its top with its reason; nothing outside the folder may, and
+# test/Unsafe.Test.ps1 holds it.
+unsafe_code = "deny"
 
-[lints.clippy]
-# Warned, never denied. doc/governance/rust-style.md section 3: a function
-# length gate was tried in this estate's PowerShell and produced a sixteen-entry
-# waiver list while catching nothing. The number worth reading is branches, and
-# clippy prints both.
-too_many_lines = "warn"
+# What a remote surface needs is always linked; every dependency marked
+# optional is the node's, and only the `node` feature turns it on (see
+# [features]).
+[dependencies]
+# The node and the surface the exports answer for: every rule an export
+# calls is the runtime's, and this crate holds the exports alone. The runtime
+# never depends on this one (ADR-0058, amendment 2026-11-16).
+runtime = { package = "xmip-core-runtime", git = "https://github.com/IlleNilsson/xmip-core-runtime", branch = "main", default-features = false }
+abi = { package = "xmip-core-abi", git = "https://github.com/IlleNilsson/xmip-core-abi", branch = "main" }
+xcore = { package = "xmip-core", git = "https://github.com/IlleNilsson/xmip-core", branch = "main" }
+node = { package = "xmip-core-node", git = "https://github.com/IlleNilsson/xmip-core-node", branch = "main" }
+observe = { package = "xmip-core-observe", git = "https://github.com/IlleNilsson/xmip-core-observe", branch = "main" }
+# Section 9: a program's audit record, forwarded to the capability that owns
+# it (ADR-0062). xaudit, as xcore, because the export's own file is ffi/audit.rs.
+xaudit = { package = "xmip-core-audit", git = "https://github.com/IlleNilsson/xmip-core-audit", branch = "main" }
+# What this library hands audit as the program a .NET program audits
+# through (ffi/audit.rs, program): the file sink, and the operating system's
+# log for when audit cannot persist, the Windows Event Log or the local
+# syslog. Each log's crate is empty off its own platform, so both are linked
+# and each builds where it works.
+audit-file = { package = "xmip-core-audit-file", git = "https://github.com/IlleNilsson/xmip-core-audit-file", branch = "main" }
+audit-syslog = { package = "xmip-core-audit-syslog", git = "https://github.com/IlleNilsson/xmip-core-audit-syslog", branch = "main" }
+audit-windows-event-log = { package = "xmip-core-audit-windows-event-log", git = "https://github.com/IlleNilsson/xmip-core-audit-windows-event-log", branch = "main" }
+# Section 11: Events, subscribed from any language: the Event and its
+# filter are the event crate's (ADR-0065). xevent, as xaudit, because the
+# export's own file is ffi/event.rs.
+xevent = { package = "xmip-core-event", git = "https://github.com/IlleNilsson/xmip-core-event", branch = "main", optional = true }
+# The process's hub section 11 forwards to, the cluster's `delivery`
+# (ADR-0065, amendment 2026-11-13), which comes with `node`; a remote build
+# links no hub.
+xcluster = { package = "xmip-core-cluster", git = "https://github.com/IlleNilsson/xmip-core-cluster", branch = "main", default-features = false, optional = true }
+configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main", optional = true }
+# Section 10 hands the designer's views and edits to its language server as
+# JSON, in memory only (ADR-0031 clause 2, ADR-0064).
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = "1"
+# The designer's edits change the lines of the cluster's file they touch and
+# leave the developer's comments and layout as they were (ADR-0064 clause 4).
+toml = { version = "1.2.1", optional = true }
+toml_edit = { version = "0.25.19", features = ["serde"], optional = true }
+# A Subscription, its filter and where it routes are route's, read here from
+# an Xmip Application and never modelled again (ADR-0064); a filter is one
+# line of Xmip's expression language, and the designer's rows are a view of
+# its compiled tree, never a second grammar (ADR-0066).
+route = { package = "xmip-core-route", git = "https://github.com/IlleNilsson/xmip-core-route", branch = "main", optional = true }
+path = { package = "xmip-core-path", git = "https://github.com/IlleNilsson/xmip-core-path", branch = "main", optional = true }
+# An Event subscriber's identity and the gate's decision on it (section 11),
+# and the authenticated identity a role check takes (section 18).
+context = { package = "xmip-core-context", git = "https://github.com/IlleNilsson/xmip-core-context", branch = "main", optional = true }
+authorize = { package = "xmip-core-authorize", git = "https://github.com/IlleNilsson/xmip-core-authorize", branch = "main", optional = true }
+# Section 24: the scripts IT runs for a database server, written by Xmip
+# Storage's schema.
+persist = { package = "xmip-core-persist", git = "https://github.com/IlleNilsson/xmip-core-persist", branch = "main", optional = true }
+secret = { package = "xmip-core-secret", git = "https://github.com/IlleNilsson/xmip-core-secret", branch = "main", optional = true }
+tls = { package = "xmip-core-library-tls", git = "https://github.com/IlleNilsson/xmip-core-library-tls", branch = "main" }
+# A person's certificate (ADR-0034, amendment 2026-10-15): the request a
+# surface makes — the phone's build too — and, on a node's, the signing by
+# the authority `[provision.operator]` names; the cluster's authority kept in
+# a folder (section 23).
+provision = { package = "xmip-core-provision", git = "https://github.com/IlleNilsson/xmip-core-provision", branch = "main" }
+# An authority's PEM (section 23), and the wide string a test names a
+# library to Windows by (`codec::wide`).
+codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main", optional = true }
 
-# The ones that catch real defects rather than taste.
-pedantic = { level = "warn", priority = -1 }
-missing_errors_doc = "warn"
-missing_panics_doc = "warn"
-unwrap_used = "warn"
-expect_used = "allow"
+[dev-dependencies]
+# The runtime's fixtures, the gates' stand-ins and the test authority
+# (`fixture`), which the exports' tests run a node with. Without the default
+# features, so a remote build's tests stay a remote build
+# (`--no-default-features --features remote`).
+runtime = { package = "xmip-core-runtime", git = "https://github.com/IlleNilsson/xmip-core-runtime", branch = "main", default-features = false, features = ["test-support"] }
+# The test cluster's names, from its `cluster.xmip` (`configure::fixture`;
+# ADR-0056, amendment 2026-10-03): no test writes a cluster or node name.
+configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main", features = ["test-support"] }
+# The wide string a test of a pinned library names it to Windows by
+# (`codec::wide`), in a remote build too.
+codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main" }
+# The Party an Event gate's test admits (`ffi::event::gate`), and the
+# authenticated identity a role check's test holds, in a remote build too
+# (`ffi::security_role`).
+party = { package = "xmip-core-party", git = "https://github.com/IlleNilsson/xmip-core-party", branch = "main" }
+context = { package = "xmip-core-context", git = "https://github.com/IlleNilsson/xmip-core-context", branch = "main" }
+
+[features]
+# A node and every surface on a machine that runs one.
+default = ["node"]
+# The node's exports: `xmip_operate.h` sections 1, 5, 6 and 10 to 16,
+# section 17's serve exports, section 19's signing (`xmip_operator_sign_v1`,
+# by the authority `[provision.operator]` names) and section 21, a host's
+# listener in Xmip's own protection and the certificate an authority issues
+# it (`ffi::secure_listener`), and section 22, a node's certificate from the
+# cluster's authority (`ffi::node_certificate`), and section 23, the
+# cluster's authority kept in a folder and a node's certificate carried
+# across an air gap (`ffi::authority`), and section 25, every Report listed
+# and a Quest probing a node's configuration (`ffi::report`); and the
+# designer (`design`). Everything a remote surface has, too.
+node = [
+    "remote",
+    "runtime/node",
+    "dep:serde",
+    "dep:xevent",
+    "xcluster/delivery",
+    "dep:configure",
+    "dep:toml",
+    "dep:toml_edit",
+    "dep:route",
+    "dep:path",
+    "dep:context",
+    "dep:authorize",
+    "dep:persist",
+    "dep:secret",
+    "dep:codec",
+    "dep:xcluster",
+]
+# A surface that follows nodes on other machines and runs none, the phone
+# (ADR-0014, amendment 2026-10-14), over the runtime's `plane::remote`:
+# `xmip_operate.h` section 7 (the rules), section 8 (a publication read),
+# section 9 (a program's audit record), section 18 (the role and the gate),
+# section 17's client exports (`xmip_remote_*`, the kept open too) and
+# section 19's request (`xmip_operator_request_v1`, a person's key and
+# request, and its two halves around a keeper's signature,
+# `xmip_operator_information_v1` and `xmip_operator_assemble_v1`, and the
+# chain and anchors kept whole, `xmip_operator_keep_v1`). Built alone with
+# `--no-default-features --features remote`.
+remote = ["runtime/remote"]
 
 [profile.dev.package."*"]
 opt-level = 3
