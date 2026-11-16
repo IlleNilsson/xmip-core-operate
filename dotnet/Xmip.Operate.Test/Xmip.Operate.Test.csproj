@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The Operate model's tests: each section of xmip_operate.h called through
+    the runtime library Xmip.Operate's project copies beside this assembly,
+    the library loaded each platform's way, and a remote build refused for
+    what it does not carry. The binding's agreement with the headers is
+    xmip-core-abi's Xmip.Abi.Test; the one test here that reads a header holds
+    a call this model binds to the shape the header declares, so the headers
+    are copied beside the assembly too.
+
+    Target framework and the rest come from Directory.Build.props.
+  -->
+
+  <PropertyGroup>
+    <RootNamespace>Xmip.Operate.Test</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- xUnit v3: a test project is its own executable. `dotnet test`
+         drives it through VSTest and xunit.runner.visualstudio, the way
+         the estate's tooling calls it (Test-XmipDotnetModule); xunit.v3 4
+         would otherwise make it a Microsoft.Testing.Platform application,
+         which the .NET 10 and later SDK refuses under VSTest. -->
+    <OutputType>Exe</OutputType>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+
+    <!-- Test classes are public for the runner, not for a reader. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.1" />
+    <PackageReference Include="xunit.v3" Version="4.0.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Xmip.Operate\Xmip.Operate.csproj" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The test cluster's names, read by the one helper every .NET test
+         shares (ADR-0056, amendment 2026-10-03); it reads through the
+         surface's one TOML reader. -->
+    <ProjectReference Include="..\Xmip.Surface\Xmip.Surface.csproj" />
+    <Compile Include="..\Xmip.Surface.Test\TestCluster.cs" Link="TestCluster.cs" />
+    <Using Include="Xmip.Surface.Test" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The one reader of a header's text, and the normative headers beside
+         the assembly, both xmip-core-abi's: a sibling in the estate, five
+         levels up from this project. -->
+    <Compile Include="..\..\..\..\..\foundation\abi\dotnet\Xmip.Abi.Test\Header.cs"
+             Link="Header.cs" />
+    <None Include="..\..\..\..\..\foundation\abi\include\*.h"
+          Link="include\%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
