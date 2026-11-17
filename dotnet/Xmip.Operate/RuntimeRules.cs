@@ -28,15 +28,17 @@ namespace Xmip.Operate;
 /// runtime carries, is <see cref="Catalogue"/>; section 13, a System
 /// Process declared, is <see cref="Processes"/>; section 20, a database's
 /// schema upgraded, is <see cref="Databases"/>; section 25, every Report
-/// listed and one opened, is <see cref="Reports"/>.
+/// listed and one opened, is <see cref="Reports"/>; section 26, a module
+/// library probed, is <see cref="Modules"/>; section 27, a configuration
+/// document read, written and set, is <see cref="Documents"/>.
 /// </summary>
 /// <remarks>
 /// Pure calls: none reads the snapshot or holds a table, so one instance
 /// serves a whole process from any thread and is never released. What it
 /// answers is copied out at once; nothing borrowed outlives the call. A
 /// library that is the runtime's remote build, the phone's, carries sections
-/// 7, 8, 9, 17's client, 18 and 19's request only: each node's binding here,
-/// sections 10 to 16, 19's signing and 25, then throws an
+/// 7, 8, 9, 17's client, 18, 19's request and 27 only: each node's binding here,
+/// sections 10 to 16, 19's signing, 25 and 26, then throws an
 /// <see cref="InvalidOperationException"/> saying so (<see cref="RemoteBuild"/>).
 /// </remarks>
 // Every call encodes its strings into stack buffers the encoder then fills;
@@ -144,6 +146,8 @@ public sealed partial class RuntimeRules
         Databases = Node(
             library, RuntimeDatabases.Entrypoints, () => new RuntimeDatabases(library));
         Reports = Node(library, RuntimeReports.Entrypoints, () => new RuntimeReports(library));
+        Modules = Node(library, RuntimeModules.Entrypoints, () => new RuntimeModules(library));
+        Documents = new RuntimeDocuments(library);
         SecurityRoles = new RuntimeSecurityRoles(library);
         RuntimeSecurityRoles callers = SecurityRoles;
         Hosting = Node(
@@ -249,6 +253,17 @@ public sealed partial class RuntimeRules
     public RuntimeReports Reports =>
         field ?? throw RemoteBuild.Refused(_library, RuntimeReports.Entrypoints);
 
+    /// <summary>Section 26: a module library probed through the runtime's one
+    /// loader and judged by the rule a node judges it by (ADR-0012, amendment
+    /// 2026-11-17). A node's build only.</summary>
+    public RuntimeModules Modules =>
+        field ?? throw RemoteBuild.Refused(_library, RuntimeModules.Entrypoints);
+
+    /// <summary>Section 27: a configuration document read, written and one
+    /// key of it set by the runtime's one reader (ADR-0031, amendment
+    /// 2026-11-17).</summary>
+    public RuntimeDocuments Documents { get; }
+
     /// <summary>The stage words, in message-path order — the segments a
     /// scope names a stage by: <c>node::Stage::WORDS</c>, read once when the
     /// library loads.</summary>
@@ -260,9 +275,9 @@ public sealed partial class RuntimeRules
     public IReadOnlyList<string> RoleWords { get; }
 
     /// <summary>Section 7's, section 8's, section 9's, section 17's client,
-    /// section 18's and section 19's request symbols, each of which a runtime
+    /// section 18's, section 19's request and section 27's symbols, each of which a runtime
     /// must export, its remote build too. Sections 10 to 16, section 17's
-    /// serve side, section 19's signing and section 25 are a node's, bound
+    /// serve side, section 19's signing and sections 25 and 26 are a node's, bound
     /// where the library exports them (<see cref="RemoteBuild"/>).</summary>
     public static IReadOnlyList<string> Entrypoints { get; } =
     [
@@ -279,6 +294,7 @@ public sealed partial class RuntimeRules
         .. RuntimeRemotes.Entrypoints,
         .. RuntimeSecurityRoles.Entrypoints,
         .. RuntimeCertificates.Entrypoints,
+        .. RuntimeDocuments.Entrypoints,
         OperateAbi.ScopeContainsEntrypoint,
         OperateAbi.ScopeMatchesEntrypoint,
         OperateAbi.RunShownEntrypoint,
@@ -354,31 +370,6 @@ public sealed partial class RuntimeRules
         where T : class
     {
         return RemoteBuild.Carries(library, entrypoints) ? bind() : null;
-    }
-
-    private static string[] Words(delegate* unmanaged[Cdecl]<XmipStr*, nuint, nuint*, int> words)
-    {
-        nuint count = 0;
-
-        unsafe
-        {
-            Check(words(null, 0, &count));
-        }
-
-        XmipStr[] found = new XmipStr[count];
-
-        fixed (XmipStr* into = found)
-        {
-            unsafe
-            {
-                Check(words(into, count, &count));
-            }
-        }
-
-        unsafe
-        {
-            return [.. found.Select(word => word.Read())];
-        }
     }
 
     // Any other status is a runtime breaking section 7's promise, not an answer.

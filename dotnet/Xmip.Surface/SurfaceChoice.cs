@@ -84,10 +84,6 @@ public static partial class SurfaceChoice
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // Found for every surface: each calls the runtime's rules, and the
-        // gRPC client, in this library.
-        _ = RuntimeLibrary.Find(configuration, basePath);
-
         return Opened(configuration.GetSection(Table), configuration, basePath, keeper);
     }
 
@@ -163,15 +159,10 @@ public static partial class SurfaceChoice
 
         IConfigurationSection[] clusters = Clusters(configuration);
 
-        if (clusters.Length == 0)
-        {
-            return ClusterSurfaces.Over(Open(configuration, basePath, keeper));
-        }
-
-        _ = RuntimeLibrary.Find(configuration, basePath);
-
-        return Held(clusters.Select<IConfigurationSection, Func<IOperatorSurface>>(
-            table => () => Opened(table, configuration, basePath, keeper)));
+        return clusters.Length == 0
+            ? ClusterSurfaces.Over(Open(configuration, basePath, keeper))
+            : Held(clusters.Select<IConfigurationSection, Func<IOperatorSurface>>(
+                table => () => Opened(table, configuration, basePath, keeper)));
     }
 
     /// <summary>
@@ -259,12 +250,8 @@ public static partial class SurfaceChoice
 
         IConfigurationSection[] clusters = Clusters(configuration);
 
-        if (clusters.Length == 0)
-        {
-            return Open(configuration, basePath);
-        }
-
-        _ = RuntimeLibrary.Find(configuration, basePath);
-        return Opened(clusters[0], configuration, basePath, keeper: null);
+        return clusters.Length == 0
+            ? Open(configuration, basePath)
+            : Opened(clusters[0], configuration, basePath, keeper: null);
     }
 }

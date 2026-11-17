@@ -7,48 +7,10 @@
 //! and writes its answer where it was told.
 #![allow(unsafe_code)]
 
-use abi::ffi::{Str, status};
+use abi::ffi::Str;
 
 use crate::design;
-use crate::ffi::rule::refuse;
-use crate::ffi::text::scope_text;
-
-/// Read both texts, answer, and write the answer or the refusal in the
-/// header's text shape: its true length in `out_len` whether or not it fit.
-/// Every export here is this call alone, so it is their outermost frame and
-/// holds their panic guard (specification section 6).
-///
-/// # Safety
-/// `input` and `argument` point at their stated lengths of readable bytes;
-/// `out` has room for `cap` bytes; `out_len` is writable.
-unsafe fn answer(
-    input: Str,
-    argument: Str,
-    out: *mut u8,
-    cap: usize,
-    out_len: *mut usize,
-    answering: impl FnOnce(&str, &str) -> Result<String, String>,
-) -> i32 {
-    abi::guarded(status::PANIC, || {
-        // SAFETY: the caller upholds the header's contract on both texts:
-        // their bytes are the caller's, alive for the call, and not freed.
-        let (Some(input), Some(argument)) = (unsafe { scope_text(input) }, unsafe {
-            scope_text(argument)
-        }) else {
-            return status::MALFORMED;
-        };
-
-        let (code, text) = match answering(input, argument) {
-            Ok(answer) => (status::OK, answer),
-            Err(refusal) => (status::INVALID, refusal),
-        };
-
-        // SAFETY: `out` has room for `cap` bytes and `out_len` is writable,
-        // per the contract; the text shape a refusal takes is the answer's.
-        unsafe { refuse(&text, out, cap, out_len) };
-        code
-    })
-}
+use crate::ffi::text::answer;
 
 /// `xmip_cluster_views_v1`: [`design::views`].
 ///
@@ -161,6 +123,7 @@ pub unsafe extern "C" fn xmip_cluster_signed_slice_v1(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use abi::ffi::status;
 
     #[test]
     fn every_export_has_the_shape_the_binding_declares() {

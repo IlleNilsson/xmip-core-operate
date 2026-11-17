@@ -1,11 +1,12 @@
-using Microsoft.Extensions.Configuration;
 using Xmip.Operate;
 
 namespace Xmip.Surface.Test;
 
 /// <summary>
-/// One rule for finding the runtime, in order: configuration, environment,
-/// beside the executable (ADR-0052 clause 1).
+/// One rule for finding the runtime, in order: a library stated for the
+/// invocation, the environment, beside the executable (ADR-0052 clause 1;
+/// amendment 2026-11-17: a surface's document no longer names it, since the
+/// runtime reads the document).
 /// </summary>
 public sealed class RuntimeLibraryTest
 {
@@ -13,69 +14,38 @@ public sealed class RuntimeLibraryTest
     private static readonly string Beside = Path.Combine(Path.GetTempPath(), "xmip-surface-exe");
 
     [Fact]
-    public void ConfigurationWinsAndResolvesAgainstTheBasePath()
-    {
-        string chosen = RuntimeLibrary.Choose(
-            "lib/runtime.dll", "/elsewhere/runtime.dll", Base, Beside);
-
-        Assert.Equal(Path.GetFullPath(Path.Combine(Base, "lib", "runtime.dll")), chosen);
-    }
-
-    [Fact]
-    public void AnAbsoluteConfiguredPathIsTakenAsIs()
-    {
-        string absolute = Path.Combine(Base, "runtime.dll");
-
-        Assert.Equal(absolute, RuntimeLibrary.Choose(absolute, null, Beside, Beside));
-    }
-
-    [Fact]
-    public void TheEnvironmentIsNextWhenConfigurationIsBlank()
+    public void TheEnvironmentIsFirst()
     {
         string fromEnvironment = Path.Combine(Base, "env-runtime.dll");
 
-        Assert.Equal(fromEnvironment, RuntimeLibrary.Choose("  ", fromEnvironment, Base, Beside));
-        Assert.Equal(fromEnvironment, RuntimeLibrary.Choose(null, fromEnvironment, Base, Beside));
+        Assert.Equal(fromEnvironment, RuntimeLibrary.Choose(fromEnvironment, Beside));
     }
 
     [Fact]
     public void BesideTheExecutableIsLast()
     {
-        string chosen = RuntimeLibrary.Choose(null, "", Base, Beside);
+        string beside = Path.Combine(Beside, NativeRuntime.FileName);
 
-        Assert.Equal(Path.Combine(Beside, NativeRuntime.FileName), chosen);
+        Assert.Equal(beside, RuntimeLibrary.Choose("", Beside));
+        Assert.Equal(beside, RuntimeLibrary.Choose(null, Beside));
     }
 
     [Fact]
     public void ALibraryStatedForTheInvocationWinsOverEverything()
     {
-        // xmip --runtime and a cmdlet's -Library: the one precedence,
-        // taken from the current directory, over the document.
-        IConfiguration document = Configured("configured.dll");
-
+        // xmip --runtime and a cmdlet's -Library: the one precedence, taken
+        // from the current directory.
         Assert.Equal(
-            Path.GetFullPath("override.dll"),
-            RuntimeLibrary.Stated("override.dll", document, Base, Beside));
+            Path.GetFullPath("override.dll"), RuntimeLibrary.Stated("override.dll", Beside));
     }
 
     [Fact]
-    public void ABlankStatementIsNoStatementAndTheDocumentDecides()
+    public void ABlankStatementIsNoStatementAndTheRuleDecides()
     {
-        IConfiguration document = Configured("configured.dll");
+        string ruled = RuntimeLibrary.Choose(
+            Environment.GetEnvironmentVariable(RuntimeLibrary.EnvironmentVariable), Beside);
 
-        Assert.Equal(
-            Path.GetFullPath(Path.Combine(Base, "configured.dll")),
-            RuntimeLibrary.Stated(" ", document, Base, Beside));
-        Assert.Equal(
-            Path.GetFullPath(Path.Combine(Base, "configured.dll")),
-            RuntimeLibrary.Stated(null, document, Base, Beside));
-    }
-
-    private static IConfiguration Configured(string library)
-    {
-        return new ConfigurationBuilder()
-            .AddInMemoryCollection(
-                [new KeyValuePair<string, string?>(RuntimeLibrary.ConfigurationKey, library)])
-            .Build();
+        Assert.Equal(ruled, RuntimeLibrary.Stated(" ", Beside));
+        Assert.Equal(ruled, RuntimeLibrary.Stated(null, Beside));
     }
 }

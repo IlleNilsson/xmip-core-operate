@@ -108,6 +108,16 @@ public sealed class RemoteBuildTest
     }
 
     [Fact]
+    public void TheRemoteBuildReadsADocument()
+    {
+        // The phone reads its own gui.toml by the runtime's one reader
+        // (section 27; ADR-0031, amendment 2026-11-17), and probes no module.
+        Assert.True(Rules.Documents.TryRead("[Xmip]\nSurface = \"remote\"\n", out string read));
+        Assert.Contains("\"remote\"", read, StringComparison.Ordinal);
+        Assert.Throws<InvalidOperationException>(() => Rules.Modules);
+    }
+
+    [Fact]
     public void ARemoteBuildServesNothingAndSaysSo()
     {
         InvalidOperationException refused = Assert.Throws<InvalidOperationException>(

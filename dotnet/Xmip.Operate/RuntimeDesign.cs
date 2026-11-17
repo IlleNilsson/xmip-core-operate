@@ -121,7 +121,8 @@ public sealed class RuntimeDesign
         return Call(_signed, cluster, argument, out answer);
     }
 
-    private static delegate* unmanaged[Cdecl]<
+    // Section 27's exports take this shape too (RuntimeDocuments).
+    internal static delegate* unmanaged[Cdecl]<
         XmipStr, XmipStr, byte*, nuint, nuint*, int> Export(nint library, string entrypoint)
     {
         return (delegate* unmanaged[Cdecl]<XmipStr, XmipStr, byte*, nuint, nuint*, int>)
@@ -129,8 +130,8 @@ public sealed class RuntimeDesign
     }
 
     // The header's one shape: OK with the answer, INVALID with the refusal,
-    // the true length in out_len whether or not it fit.
-    private static bool Call(
+    // the true length in out_len whether or not it fit; sections 10 and 27.
+    internal static bool Call(
         delegate* unmanaged[Cdecl]<XmipStr, XmipStr, byte*, nuint, nuint*, int> export,
         string input,
         string argument,
@@ -156,7 +157,7 @@ public sealed class RuntimeDesign
             0 => true,
             (int)XmipStatus.Invalid => false,
             _ => throw new InvalidOperationException(
-                $"the runtime answered cluster.xmip with {(XmipStatus)status}"),
+                $"the runtime answered a document with {(XmipStatus)status}"),
         };
     }
 

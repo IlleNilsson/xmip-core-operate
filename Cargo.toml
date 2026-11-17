@@ -57,14 +57,18 @@ xevent = { package = "xmip-core-event", git = "https://github.com/IlleNilsson/xm
 # (ADR-0065, amendment 2026-11-13), which comes with `node`; a remote build
 # links no hub.
 xcluster = { package = "xmip-core-cluster", git = "https://github.com/IlleNilsson/xmip-core-cluster", branch = "main", default-features = false, optional = true }
-configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main", optional = true }
+# Section 27: every configuration document a surface reads, writes or
+# edits, the phone's own among them, is read by configure, the runtime's one
+# reader (ADR-0031, amendment 2026-11-17), so a remote build links it too.
+configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main" }
 # Section 10 hands the designer's views and edits to its language server as
 # JSON, in memory only (ADR-0031 clause 2, ADR-0064).
 serde = { version = "1", features = ["derive"], optional = true }
 serde_json = "1"
-# The designer's edits change the lines of the cluster's file they touch and
-# leave the developer's comments and layout as they were (ADR-0064 clause 4).
-toml = { version = "1.2.1", optional = true }
+# A document's tables as section 27 hands them across, and the designer's
+# edits, which change the lines of the cluster's file they touch and leave
+# the developer's comments and layout as they were (ADR-0064 clause 4).
+toml = "1.2.1"
 toml_edit = { version = "0.25.19", features = ["serde"], optional = true }
 # A Subscription, its filter and where it routes are route's, read here from
 # an Xmip Application and never modelled again (ADR-0064); a filter is one
@@ -119,16 +123,17 @@ default = ["node"]
 # cluster's authority (`ffi::node_certificate`), and section 23, the
 # cluster's authority kept in a folder and a node's certificate carried
 # across an air gap (`ffi::authority`), and section 25, every Report listed
-# and a Quest probing a node's configuration (`ffi::report`); and the
-# designer (`design`). Everything a remote surface has, too.
+# and a Quest probing a node's configuration (`ffi::report`), and section
+# 26, a module library probed through the runtime's one loader
+# (`ffi::module_probe`, `runtime/loader`); and the designer (`design`).
+# Everything a remote surface has, too.
 node = [
     "remote",
     "runtime/node",
+    "runtime/loader",
     "dep:serde",
     "dep:xevent",
     "xcluster/delivery",
-    "dep:configure",
-    "dep:toml",
     "dep:toml_edit",
     "dep:route",
     "dep:path",
@@ -143,6 +148,7 @@ node = [
 # (ADR-0014, amendment 2026-10-14), over the runtime's `plane::remote`:
 # `xmip_operate.h` section 7 (the rules), section 8 (a publication read),
 # section 9 (a program's audit record), section 18 (the role and the gate),
+# section 27 (a configuration document read, written and set),
 # section 17's client exports (`xmip_remote_*`, the kept open too) and
 # section 19's request (`xmip_operator_request_v1`, a person's key and
 # request, and its two halves around a keeper's signature,

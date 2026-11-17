@@ -7,7 +7,7 @@ namespace Xmip.Operate;
 // Section 7's stage, role and capability rules: what a stage counts, whether
 // it pauses, what a thing at it is called, the roles a declaration names, the
 // stages each serves and what a node declaring them is for, and a node's
-// declared capability.
+// declared capability; and the stage and role words, read as it loads.
 public sealed partial class RuntimeRules
 {
     /// <summary>What a stage counts — <c>observe::Counted::at</c>: Streams at
@@ -275,6 +275,33 @@ public sealed partial class RuntimeRules
         unsafe
         {
             return new DeclaredCapability(node.Read(), Read(roles, count), false, string.Empty);
+        }
+    }
+
+    // The stage words and the role words, read once as the library loads:
+    // asked for the count, then filled.
+    private static string[] Words(delegate* unmanaged[Cdecl]<XmipStr*, nuint, nuint*, int> words)
+    {
+        nuint count = 0;
+
+        unsafe
+        {
+            Check(words(null, 0, &count));
+        }
+
+        XmipStr[] found = new XmipStr[count];
+
+        fixed (XmipStr* into = found)
+        {
+            unsafe
+            {
+                Check(words(into, count, &count));
+            }
+        }
+
+        unsafe
+        {
+            return [.. found.Select(word => word.Read())];
         }
     }
 }

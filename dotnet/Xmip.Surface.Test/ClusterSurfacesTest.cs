@@ -211,7 +211,6 @@ public sealed class ClusterSurfacesTest
             [Xmip]
             Surface = "local"
             Local = "xmip-nobody-listens-here"
-            RuntimeLibrary = "lib/xmip_core_operate.dll"
             """);
 
         using ClusterSurfaces held = SurfaceChoice.OpenAll(local.Configuration, local.Directory);

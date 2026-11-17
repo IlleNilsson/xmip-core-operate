@@ -23,7 +23,6 @@ public sealed class ClusterListTest
         string endpoint = TestEndpoint.Named("nobody");
         using Papers papers = new($"""
             [Xmip]
-            RuntimeLibrary = "lib/xmip_core_operate.dll"
 
             [[Xmip.Clusters]]
             Surface = "local"
