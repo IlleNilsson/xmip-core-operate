@@ -47,7 +47,7 @@ public sealed class ScopeTreeTest
     /// <summary>Scopes and their names within the cluster.</summary>
     public static TheoryData<string, string> Names => new()
     {
-        { $"{Cluster.Scope}/filing/s3/xml", "filing/s3/xml" },
+        { $"{Cluster.Scope}/filing/aws-s3/xml", "filing/aws-s3/xml" },
         {
             $"{Cluster.Scope}/node/{Receiver}/receive/http/json",
             $"node/{Receiver}/receive/http/json"
@@ -112,7 +112,7 @@ public sealed class ScopeTreeTest
     /// <summary>
     /// A name is the exact scope within its cluster. Until 2026-09-26 the
     /// first two segments were dropped: the Monitor said a skipped cabinet
-    /// was <c>s3/xml</c>, which test it was nowhere, and a node's leaf lost
+    /// was <c>aws-s3/xml</c>, which test it was nowhere, and a node's leaf lost
     /// the node marker.
     /// </summary>
     [Theory]
