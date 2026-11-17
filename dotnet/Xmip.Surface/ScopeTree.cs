@@ -157,10 +157,10 @@ public static class ScopeTree
     /// <summary>What a thing is called within its cluster: every segment
     /// beneath the first, which is the cluster (<c>node::Scope</c>: segment
     /// 0 is the cluster and never the node) — <c>node/&lt;node&gt;/receive/http/json</c>,
-    /// <c>filing/s3/xml</c> — or the scope itself when it is the cluster or
+    /// <c>filing/aws-s3/xml</c> — or the scope itself when it is the cluster or
     /// the root. Until 2026-09-26 the first two segments were dropped, which
     /// read a scope as node, stage, name: an Essentials scope lost its test
-    /// (<c>filing/s3/xml</c> said <c>s3/xml</c>) and a node's leaf its node
+    /// (<c>filing/aws-s3/xml</c> said <c>aws-s3/xml</c>) and a node's leaf its node
     /// marker, so no view named the exact scope.</summary>
     public static string Name(string scope)
     {
