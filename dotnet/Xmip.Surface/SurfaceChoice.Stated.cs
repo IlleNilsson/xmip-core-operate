@@ -40,8 +40,10 @@ public static partial class SurfaceChoice
             throw new InvalidOperationException(refusal);
         }
 
-        // Found whatever the surface: every one calls the runtime in it.
-        _ = RuntimeLibrary.Stated(line.Runtime, document, basePath, besideExecutable);
+        // Found whatever the surface: every one calls the runtime in it. A
+        // caller that read its document first had it loaded by then, so a
+        // library the line states is stated before the read (Answering).
+        _ = RuntimeLibrary.Stated(line.Runtime, besideExecutable);
 
         return !string.IsNullOrWhiteSpace(line.Remote)
             ? new RemoteOperator(line.Remote, SecureSurface.From(document, basePath))
@@ -79,6 +81,9 @@ public static partial class SurfaceChoice
         string basePath = Path.GetDirectoryName(Path.GetFullPath(documentPath))
             ?? besideExecutable;
         IOperatorSurface surface;
+
+        // Before the document: the runtime reads it, in this library.
+        _ = RuntimeLibrary.Stated(line.Runtime, besideExecutable);
 
         try
         {

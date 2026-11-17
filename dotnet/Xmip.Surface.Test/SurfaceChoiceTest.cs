@@ -88,7 +88,6 @@ public sealed class SurfaceChoiceTest
     {
         using Document document = new("""
             [Xmip]
-            RuntimeLibrary = "lib/xmip_core_operate.dll"
             """);
 
         Assert.False(SurfaceChoice.IsChosen(document.Configuration));
@@ -241,7 +240,7 @@ public sealed class SurfaceChoiceTest
     public void NoSurfaceNamedAnywhereNamesNoNodeAndSaysSo()
     {
         IOperatorSurface chosen = SurfaceChoice.Stated(
-            SurfaceLine.None, Pairs(("RuntimeLibrary", "configured.dll")), Beside, Beside);
+            SurfaceLine.None, Pairs(), Beside, Beside);
 
         using LocalOperator local = Assert.IsType<LocalOperator>(chosen);
         Assert.False(SurfaceChoice.Answers(local));

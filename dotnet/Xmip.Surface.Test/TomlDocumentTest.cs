@@ -1,10 +1,11 @@
-using Tomlyn.Syntax;
+using Microsoft.Extensions.Configuration;
 
 namespace Xmip.Surface.Test;
 
 /// <summary>
-/// Editing a document in its syntax tree: a value changes and nothing else
-/// does (open problem 25, row b).
+/// A document read and one key of it set by the runtime's one reader,
+/// <c>xmip-core-configure</c>, through <c>xmip_operate.h</c> section 27: a
+/// value changes and nothing else does (open problem 25, rows b and u).
 /// </summary>
 public sealed class TomlDocumentTest
 {
@@ -16,80 +17,86 @@ public sealed class TomlDocumentTest
         # before the rows
         [[row]]
         key = "one"
-        [[row.sub]]
-        key = "inner"
-
-        # before the second row
-        [[row]]
-        key = "two"
 
         [other]
         "dotted.key" = true
+        whole = 7
+
         """;
+
+    [Fact]
+    public void ADocumentReadsAsTheConfigurationsKeysArraysByPosition()
+    {
+        using Papers papers = new(Document);
+
+        IConfigurationRoot read = TomlDocument.Read(papers.Path);
+
+        Assert.Equal("a", read["service:name"]);
+        Assert.Equal("one", read["row:0:key"]);
+        Assert.Equal("true", read["other:dotted.key"]);
+        Assert.Equal("7", read["other:whole"]);
+    }
+
+    [Fact]
+    public void AFileThatIsNotThereReadsAsAnEmptyDocument()
+    {
+        string missing = Path.Combine(Path.GetTempPath(), $"absent-{Guid.NewGuid():n}.toml");
+
+        Assert.Empty(TomlDocument.Read(missing).AsEnumerable());
+    }
+
+    [Fact]
+    public void AFileThatIsNotTomlIsRefusedInTheReadersWords()
+    {
+        using Papers papers = new("[service\nname =");
+
+        InvalidDataException refused =
+            Assert.Throws<InvalidDataException>(() => TomlDocument.Read(papers.Path));
+
+        Assert.IsType<FormatException>(refused.InnerException);
+        Assert.StartsWith(
+            "configuration parse failed", refused.InnerException.Message, StringComparison.Ordinal);
+    }
 
     [Fact]
     public void ASetReplacesTheValueAndKeepsItsComment()
     {
-        DocumentSyntax document = TomlDocument.Parse(Document);
-        TableSyntax service = TomlDocument.Tables<TableSyntax>(document, "service").Single();
-
-        TomlDocument.Set(service, "name", "b \"quoted\"");
+        string written = TomlDocument.Set(Document, ["service"], "name", "b");
 
         Assert.Equal(
-            Document.Replace(
-                "name = \"a\"", "name = \"b \\\"quoted\\\"\"", StringComparison.Ordinal),
-            document.ToString());
-        Assert.Equal("b \"quoted\"", TomlDocument.Text(service, "name"));
+            Document.Replace("name = \"a\"", "name = \"b\"", StringComparison.Ordinal), written);
     }
 
     [Fact]
-    public void AKeyIsMatchedWholeAndByItsSegments()
+    public void ASetOfAMissingTableAddsItAndARemovalLeavesTheRest()
     {
-        DocumentSyntax document = TomlDocument.Parse(Document);
-        TableSyntax other = TomlDocument.Tables<TableSyntax>(document, "other").Single();
+        string added = TomlDocument.Set(Document, ["bar"], "order", "audit,board");
 
-        Assert.Null(TomlDocument.Flag(other, "dotted"));
-        Assert.Equal(["dotted.key"], TomlDocument.KeyPath(other.Items.GetChild(0)!.Key));
-        Assert.Equal(2, TomlDocument.Tables<TableArraySyntax>(document, "row").Count());
-        Assert.Single(TomlDocument.Tables<TableArraySyntax>(document, "row", "sub"));
-    }
-
-    [Fact]
-    public void ARemovedRowTakesItsOwnTablesAndLeavesTheRestAsWritten()
-    {
-        DocumentSyntax document = TomlDocument.Parse(Document);
-        TableArraySyntax first = TomlDocument.Tables<TableArraySyntax>(document, "row").First();
-
-        TomlDocument.Remove(document, first);
-
-        // Its tables go; every comment stays, the one before the next row too.
-        string expected = Document.Replace(
-            "[[row]]\nkey = \"one\"\n[[row.sub]]\nkey = \"inner\"\n",
-            "",
-            StringComparison.Ordinal);
-        Assert.Equal(expected, document.ToString());
-    }
-
-    [Fact]
-    public void AnInsertedRowJoinsItsGroupBeforeTheNextTablesComments()
-    {
-        DocumentSyntax document = TomlDocument.Parse(Document);
-        TableArraySyntax added = new();
-        TomlDocument.Set(added, "key", "three");
-
-        TomlDocument.Insert(document, added, "row");
-
-        Assert.Equal(
-            Document.Replace(
-                "key = \"two\"\n",
-                "key = \"two\"\n\n[[row]]\nkey = \"three\"\n",
-                StringComparison.Ordinal),
-            document.ToString());
+        Assert.StartsWith(Document, added, StringComparison.Ordinal);
+        Assert.EndsWith("[bar]\norder = \"audit,board\"\n", added, StringComparison.Ordinal);
+        Assert.Equal(Document, TomlDocument.Set(Document, ["absent"], "order", null));
     }
 
     [Fact]
     public void TextThatIsNotTomlIsAFormatException()
     {
-        Assert.Throws<FormatException>(() => TomlDocument.Parse("[service\nname ="));
+        Assert.Throws<FormatException>(() => TomlDocument.Set("[service\nname =", [], "a", "b"));
+    }
+
+    private sealed class Papers : IDisposable
+    {
+        public Papers(string text)
+        {
+            Path = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), $"document-{Guid.NewGuid():n}.toml");
+            File.WriteAllText(Path, text);
+        }
+
+        public string Path { get; }
+
+        public void Dispose()
+        {
+            File.Delete(Path);
+        }
     }
 }

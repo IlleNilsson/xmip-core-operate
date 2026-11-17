@@ -15,6 +15,8 @@
 
 #[cfg(feature = "node")]
 pub mod design;
+#[cfg(feature = "remote")]
+pub mod document;
 pub mod ffi;
 #[cfg(feature = "node")]
 pub mod operator;

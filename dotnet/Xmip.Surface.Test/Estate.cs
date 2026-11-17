@@ -47,9 +47,7 @@ internal static class Estate
     public static string Library()
     {
         string library = RuntimeLibrary.Choose(
-            null,
             Environment.GetEnvironmentVariable(RuntimeLibrary.EnvironmentVariable),
-            RuntimeLibrary.Beside,
             RuntimeLibrary.Beside);
 
         Assert.True(

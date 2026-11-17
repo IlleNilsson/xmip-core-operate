@@ -34,10 +34,13 @@
 
   <ItemGroup>
     <!-- On disk the estate is TOML; JSON is reserved for memory and the wire.
-         One reader, here, for a host's configuration and for a published
-         snapshot alike. -->
-    <PackageReference Include="Tomlyn.Extensions.Configuration" Version="2.0.1" />
+         A host's configuration is read by the runtime's one reader,
+         xmip-core-configure, through xmip_operate.h section 27
+         (TomlConfigurationProvider; ADR-0031, amendment 2026-11-17): the
+         file provider below watches the file and hands it over, and no TOML
+         package reads it. -->
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="11.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="11.0.0" />
   </ItemGroup>
 
   <!-- Runtime async (.NET 11): an async method is the runtime's own, not a

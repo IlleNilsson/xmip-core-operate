@@ -95,19 +95,6 @@
         "resolved": "6.0.1",
         "contentHash": "IQ4NXP/B3Ayzvw0rDQzVTYsCKyy0Jp9KI6aYcK7UnGVlR9+Awz++TIPCQtPYfLJfOpm8ajowMR09V7quD3sEHw=="
       },
-      "Tomlyn": {
-        "type": "Transitive",
-        "resolved": "2.10.1",
-        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
-      },
-      "Tomlyn.Extensions.Configuration": {
-        "type": "Transitive",
-        "resolved": "2.0.1",
-        "contentHash": "yfYfQnXpVWSNCQzR/YfwDrs5rg0po1FagBbK5Ke3/QHGPyvJOA0YfbePxVG6nBPEFjCJuQYi9M3kZYxkOXh0Ig==",
-        "dependencies": {
-          "Tomlyn": "2.10.1"
-        }
-      },
       "xunit.analyzers": {
         "type": "Transitive",
         "resolved": "2.3.0",
@@ -188,7 +175,6 @@
       "xmip.surface": {
         "type": "Project",
         "dependencies": {
-          "Tomlyn.Extensions.Configuration": "[2.0.1, )",
           "Xmip.Operate": "[1.0.0, )"
         }
       },
