@@ -42,7 +42,7 @@ public static partial class English
     /// publisher said none.</summary>
     public static string Value(string? value)
     {
-        return string.IsNullOrWhiteSpace(value) ? "—" : value;
+        return Words.Text(OperateAbi.Text.Value, value ?? string.Empty);
     }
 
     /// <summary>A fraction of one as a whole percentage, clamped to its
@@ -79,7 +79,9 @@ public static partial class English
     /// has figures and no health, a rollup over no leaves.</summary>
     public static string Mood(HealthState? state)
     {
-        return state is { } recorded ? Mood(recorded) : "nothing recorded";
+        return state is { } recorded
+            ? Mood(recorded)
+            : Words.Phrase(OperateAbi.Phrase.NothingRecorded);
     }
 
     /// <summary>The rollup over a set of leaves as a word: <c>fine</c>,
@@ -98,18 +100,7 @@ public static partial class English
     /// <summary>How long before <paramref name="now"/> something was observed.</summary>
     public static string Age(DateTimeOffset observed, DateTimeOffset now)
     {
-        TimeSpan age = now - observed;
-
-        if (age < TimeSpan.Zero)
-        {
-            age = TimeSpan.Zero;
-        }
-
-        return age.TotalSeconds < 60
-            ? $"{(int)age.TotalSeconds}s ago"
-            : age.TotalMinutes < 60
-                ? $"{(int)age.TotalMinutes}m ago"
-                : $"{(int)age.TotalHours}h ago";
+        return Words.Age(observed, now);
     }
 
     /// <summary>A figure as a person reads it: thousands separated, and a
@@ -118,7 +109,7 @@ public static partial class English
     /// topology inspector and <c>xmip</c> give a count.</summary>
     public static string Figure(ulong? value)
     {
-        return value?.ToString("N0", CultureInfo.InvariantCulture) ?? "–";
+        return Words.Figure(value);
     }
 
     /// <summary>The six figures on one line, in the order every surface says
@@ -128,33 +119,32 @@ public static partial class English
     {
         ArgumentNullException.ThrowIfNull(figures);
 
-        return $"Streams {Figure(figures.Streams)}  " +
-            $"Messages {Figure(figures.Messages)}  " +
-            $"Journeys {Figure(figures.Journeys)}  " +
-            $"Bytes {Figure(figures.Bytes)}  " +
-            $"Retrying {Figure(figures.Retrying)}  " +
-            $"Failed {Figure(figures.Failed)}";
+        return Words.FiguresLine(
+        [
+            figures.Streams, figures.Messages, figures.Journeys, figures.Bytes,
+            figures.Retrying, figures.Failed,
+        ]);
     }
 
     /// <summary>What a surface says of a scope it holds nothing at, naming
     /// where it looked: the command line and the cmdlet say the same.</summary>
     public static string NothingAt(string scope, string source)
     {
-        return $"Nothing at {scope} ({source}).";
+        return Words.Sentence(OperateAbi.Sentence.NothingAt, scope, source);
     }
 
     /// <summary>What a surface says of a scope with nothing directly beneath
     /// it, naming where it looked.</summary>
     public static string NothingBeneath(string scope, string source)
     {
-        return $"Nothing beneath {scope} ({source}).";
+        return Words.Sentence(OperateAbi.Sentence.NothingBeneath, scope, source);
     }
 
     /// <summary>What a surface says of a scope with no figure published at
     /// it, naming where it looked.</summary>
     public static string NothingMeasured(string scope, string source)
     {
-        return $"Nothing measured at {scope} ({source}).";
+        return Words.Sentence(OperateAbi.Sentence.NothingMeasured, scope, source);
     }
 
     /// <summary>What a surface says when it has no audit to read: no audit
@@ -162,9 +152,7 @@ public static partial class English
     /// system's log (<see cref="AuditRead.File"/> is empty).</summary>
     public static string NoAuditDirectory()
     {
-        return "No audit directory is stated — neither Xmip:AuditDirectory in this "
-            + "program's configuration nor XMIP_AUDIT_DIRECTORY — so its records go to the "
-            + "operating system's log, and there is no audit here to read.";
+        return Words.Phrase(OperateAbi.Phrase.NoAuditDirectory);
     }
 
     /// <summary>What follows the name of a cluster, a group or a record whose
@@ -173,7 +161,7 @@ public static partial class English
     /// nothing for everything else.</summary>
     public static string Test(bool hidden)
     {
-        return hidden ? " · test" : string.Empty;
+        return hidden ? Words.Phrase(OperateAbi.Phrase.TestMark) : string.Empty;
     }
 
     /// <summary>A record's time as written (<see cref="AuditEntry.At"/>, RFC
@@ -183,19 +171,7 @@ public static partial class English
     {
         ArgumentNullException.ThrowIfNull(at);
 
-        if (at.Length <= 19 || at[19] != '.')
-        {
-            return at;
-        }
-
-        int zone = 20;
-
-        while (zone < at.Length && char.IsAsciiDigit(at[zone]))
-        {
-            zone++;
-        }
-
-        return string.Concat(at.AsSpan(0, 19), at.AsSpan(zone));
+        return Words.Text(OperateAbi.Text.ToTheSecond, at);
     }
 
     /// <summary>The audit capability's refusal of a query, as it said it:
@@ -226,7 +202,7 @@ public static partial class English
     /// <summary>What the Work Process card adds while the process stage holds
     /// Subscriptions alone (<see cref="IOperatorSurface.NoWorkProcessPlaced"/>;
     /// ADR-0052, amendment 2026-11-11).</summary>
-    public const string NoWorkProcess = "no Work Process placed";
+    public static string NoWorkProcess => Words.Phrase(OperateAbi.Phrase.NoWorkProcess);
 
     /// <summary>A byte count scaled to the unit a person reads.</summary>
     public static string Bytes(ulong value)
@@ -252,7 +228,7 @@ public static partial class English
             XmipStatus.Ok => $"planned {configurationPath}: validated and published, not running",
             XmipStatus.Unsupported =>
                 $"this runtime does not export {OperateAbi.StartEntrypoint}",
-            _ => $"{configurationPath} refused: {status.Explain()}; the health tree says why",
+            _ => $"{configurationPath} refused: {Explain(status)}; the health tree says why",
         };
     }
 
@@ -260,21 +236,9 @@ public static partial class English
     /// document without starting it.</summary>
     public static string Validated(string configurationPath, ValidationRecord answer)
     {
-        if (answer.IsValid)
-        {
-            return $"{configurationPath} is valid";
-        }
+        ArgumentNullException.ThrowIfNull(answer);
 
-        if (answer.Status == XmipStatus.Unsupported)
-        {
-            return $"this runtime does not export {OperateAbi.ValidateEntrypoint}";
-        }
-
-        string why = answer.Problems.Count == 0
-            ? answer.Status.Explain()
-            : string.Join("; ", answer.Problems);
-
-        return $"{configurationPath} is invalid: {why}";
+        return Words.Validated(configurationPath, (int)answer.Status, answer.Problems);
     }
 
     /// <summary>What the runtime said when asked to pause a scope.</summary>
@@ -282,7 +246,7 @@ public static partial class English
     {
         return status == XmipStatus.Ok
             ? $"paused {scope}"
-            : $"nothing to pause at {scope} ({status.Explain()})";
+            : $"nothing to pause at {scope} ({Explain(status)})";
     }
 
     /// <summary>What the runtime said when asked to resume a scope.</summary>
@@ -290,8 +254,18 @@ public static partial class English
     {
         return status == XmipStatus.Ok
             ? $"resumed {scope}"
-            : $"nothing to resume at {scope} ({status.Explain()})";
+            : $"nothing to resume at {scope} ({Explain(status)})";
     }
+
+    /// <summary>One line an operator can read for a status:
+    /// <c>abi::status_meaning</c>'s, asked of the runtime.</summary>
+    public static string Explain(XmipStatus status)
+    {
+        return Words.Meaning((int)status).Meaning;
+    }
+
+    // What a surface says, written once in Rust (xmip_operate.h section 28.3).
+    private static RuntimeWords Words => RuntimeLibrary.Rules.Sentences;
 
     private static string Scaled(double value, string unit)
     {

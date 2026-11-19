@@ -20,27 +20,8 @@ public static class DatabaseScripts
     public static IReadOnlyList<string>? Write(
         DatabaseUpgrade upgrade, string folder, out string refused)
     {
-        ArgumentNullException.ThrowIfNull(upgrade);
-        ArgumentNullException.ThrowIfNull(folder);
-
-        string[] paths = [.. upgrade.Scripts.Select(script => Path.Combine(folder, script.Name))];
-
-        if (paths.FirstOrDefault(File.Exists) is { } there)
-        {
-            refused = $"REFUSED: {there} is there already, and nothing is overwritten.";
-            return null;
-        }
-
-        Directory.CreateDirectory(folder);
-
-        foreach ((DatabaseScript script, string path) in upgrade.Scripts.Zip(paths))
-        {
-            using FileStream file = new(path, FileMode.CreateNew, FileAccess.Write);
-            using StreamWriter writer = new(file);
-            writer.Write(script.Text);
-        }
-
-        refused = string.Empty;
-        return paths;
+        // The refusal and the writing are the runtime's
+        // (xmip_database_write_v1), the ones xmip database --out writes by.
+        return RuntimeLibrary.Rules.Databases.Write(upgrade, folder, out refused);
     }
 }

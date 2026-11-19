@@ -30,7 +30,7 @@ use crate::wire::{wire_counted, wire_health, wire_kind, wire_origin, wire_patter
 /// A read publication and its values laid out as the header's, each string
 /// borrowed from `publication`, whose buffers do not move while it lives.
 pub(crate) struct Read {
-    pub(crate) publication: Publication,
+    pub(crate) publication: std::sync::Arc<Publication>,
     records: Vec<HealthEntry>,
     counts: Vec<Measurement>,
     pub(crate) nodes: Vec<Node>,
@@ -47,6 +47,12 @@ pub(crate) struct Read {
 
 impl Read {
     fn of(publication: Publication) -> Self {
+        Self::shared(std::sync::Arc::new(publication))
+    }
+
+    /// A publication a surface read and keeps, handed across as this
+    /// section lends one (section 28.2): nothing is read again.
+    pub(crate) fn shared(publication: std::sync::Arc<Publication>) -> Self {
         let records = publication
             .records
             .iter()

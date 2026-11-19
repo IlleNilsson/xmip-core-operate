@@ -10,17 +10,16 @@
 #![allow(unsafe_code)]
 
 use abi::ffi::{Str, status};
-use persist::storage::database::{Server, Technology};
-use persist::storage::schema;
 use serde_json::{Value, json};
 
+use crate::database;
 use crate::ffi::rule::refuse;
 use crate::ffi::text::scope_text;
 
-/// `xmip_database_upgrade_v1`: [`schema::upgrade`] for the database
+/// `xmip_database_upgrade_v1`: [`database::upgrade`] for the database
 /// server `server` names — `postgresql`, `mssql` or `mariadb` — from schema
-/// version `from` to `to`, zero for this build's ([`schema::VERSION`]), as
-/// the header's JSON: `{"version", "scripts": [{"name", "text"}]}`.
+/// version `from` to `to`, zero for this build's, as the header's JSON:
+/// `{"version", "scripts": [{"name", "text"}]}`.
 ///
 /// # Safety
 /// As the header states: `server` readable for its length, `out` room for
@@ -53,15 +52,15 @@ unsafe fn database_upgrade(
     let Some(word) = (unsafe { scope_text(server) }) else {
         return status::MALFORMED;
     };
-    let to = if to == 0 { schema::VERSION } else { to };
-    let (code, text) = match named(word).and_then(|server| schema::upgrade(server, from, to)) {
+    let (code, text) = match database::upgrade(word, from, to) {
         Err(refusal) => (status::INVALID, refusal),
-        Ok(scripts) => {
-            let scripts: Vec<Value> = scripts
+        Ok(upgrade) => {
+            let scripts: Vec<Value> = upgrade
+                .scripts
                 .into_iter()
                 .map(|(name, text)| json!({ "name": name, "text": text }))
                 .collect();
-            let answer = json!({ "version": schema::VERSION, "scripts": scripts });
+            let answer = json!({ "version": upgrade.version, "scripts": scripts });
             (status::OK, answer.to_string())
         }
     };
@@ -71,24 +70,11 @@ unsafe fn database_upgrade(
     code
 }
 
-/// The database server `word` names, or the refusal naming the words.
-fn named(word: &str) -> Result<Server, String> {
-    match Technology::named(word) {
-        Some(Technology::Server(server)) => Ok(server),
-        _ => {
-            let words: Vec<&str> = Server::ALL.iter().map(|server| server.word()).collect();
-            Err(format!(
-                "'{word}' is no database server Xmip Storage keeps a database on; write {}",
-                words.join(", ")
-            ))
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ffi::text::borrow;
+    use persist::storage::schema;
 
     fn upgrade(server: &str, from: u32, to: u32) -> (i32, String) {
         let mut buffer = vec![0u8; 4096];

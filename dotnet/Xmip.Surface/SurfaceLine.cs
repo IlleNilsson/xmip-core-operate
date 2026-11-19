@@ -4,9 +4,10 @@ namespace Xmip.Surface;
 /// What an operator stated for one invocation about which surface to read,
 /// over what the host's document says: a node on another machine to follow,
 /// a node on this one to follow, a published snapshot to read, and the
-/// runtime library to load. The command line states it as <c>--remote</c>,
-/// <c>--local</c>, <c>--snapshot</c> and <c>--runtime</c>; a cmdlet as
-/// <c>-Remote</c>, <c>-Local</c>, <c>-Snapshot</c> and <c>-Library</c>; the
+/// runtime library to load. A cmdlet states it as <c>-Remote</c>,
+/// <c>-Local</c>, <c>-Snapshot</c> and <c>-Library</c>, as the command line
+/// states the first three, <c>--remote</c>, <c>--local</c> and
+/// <c>--snapshot</c>, to the same rule in Rust; the
 /// prompt as the snapshot <c>Start-XmipTest</c> told it to follow. Blank is
 /// no statement. <see cref="SurfaceChoice.Stated"/> is the one precedence
 /// over it.
@@ -27,8 +28,11 @@ public sealed record SurfaceLine(
     /// <summary>Nothing stated: the document decides.</summary>
     public static SurfaceLine None { get; } = new();
 
-    /// <summary>Why the line cannot be obeyed — a remote that names no node
-    /// (<see cref="RemoteOperator.Refusal"/>) — or null when it can.</summary>
-    public string? Refusal =>
-        string.IsNullOrWhiteSpace(Remote) ? null : RemoteOperator.Refusal(Remote);
+    /// <summary>Why the line cannot be obeyed, or null when it can: a blank
+    /// remote is no statement, and what an address that names something is,
+    /// the runtime judges as it opens it (<see cref="RemoteOperator.Refusal"/>
+    /// says what a <c>--remote</c> naming nothing is told). Asked before the
+    /// runtime library the line states is loaded, so it asks the runtime
+    /// nothing.</summary>
+    public string? Refusal => null;
 }

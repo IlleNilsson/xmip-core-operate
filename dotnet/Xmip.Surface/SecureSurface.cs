@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 
 namespace Xmip.Surface;
@@ -11,11 +12,10 @@ namespace Xmip.Surface;
 /// (<c>xmip-core-library-tls</c>). A web host serves its pages over HTTPS in
 /// it (<c>xmip_operate.h</c> section 21), presenting this certificate and
 /// verifying the one a browser presents against these anchors; a
-/// <see cref="RemoteOperator"/> hands the runtime the same files
-/// (<see cref="Pem(out string, out string, out string)"/>), and the runtime
-/// presents this certificate to a node's operate listener and checks the
-/// node's against these anchors. The rule is here, once, for every .NET
-/// surface; no .NET TLS stack reads these files.
+/// <see cref="RemoteOperator"/> hands the runtime the same paths, and the
+/// runtime reads them, presents this certificate to a node's operate
+/// listener and checks the node's against these anchors, saying what is
+/// missing in words. No .NET TLS stack reads these files.
 /// </summary>
 /// <remarks>
 /// The certificate and its trust come the way <c>xmip-core-library-tls</c>
@@ -47,12 +47,6 @@ public sealed partial class SecureSurface
 
     /// <summary>The environment variable when the document names no anchors.</summary>
     public const string TrustAnchorVariable = "XMIP_TRUST_ANCHOR";
-
-    // What a remote surface naming no anchors is told, with a key in a file
-    // or kept.
-    private const string NoAnchors =
-        $"REFUSED. A remote surface trusts a node by the anchors {TrustAnchorKey} "
-        + $"or {TrustAnchorVariable} names, never the operating system's (ADR-0063)";
 
     private SecureSurface((string? Certificate, string? PrivateKey, string? TrustAnchor) paths)
     {
@@ -142,13 +136,42 @@ public sealed partial class SecureSurface
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        string? certificate = Named(configuration, CertificateKey, CertificateVariable, basePath);
-        string? privateKey = Named(configuration, PrivateKeyKey, PrivateKeyVariable, basePath);
-        string? trustAnchor = Named(configuration, TrustAnchorKey, TrustAnchorVariable, basePath);
+        // Which files the document names, else the environment, and whether
+        // they stand together: the runtime's rule
+        // (operate::surface::choice), the one the command line reads by.
+        string asked = new JsonObject
+        {
+            ["base"] = basePath,
+            ["environment"] = HostEnvironment(),
+            ["kept"] = keeper is not null,
+        }.ToJsonString();
 
-        return keeper is not null && certificate is not null && privateKey is null
-            ? Kept(certificate, trustAnchor, keeper)
-            : Load(certificate, privateKey, trustAnchor);
+        if (!RuntimeLibrary.Rules.Surfaces.Named(
+            asked, SurfaceChoice.TableOf(configuration), out string answer))
+        {
+            throw new InvalidOperationException(answer);
+        }
+
+        using System.Text.Json.JsonDocument named = System.Text.Json.JsonDocument.Parse(answer);
+        System.Text.Json.JsonElement files = named.RootElement;
+        string? File(string name) => files.GetProperty(name).GetString();
+
+        return files.GetProperty("kept").GetBoolean() && keeper is not null
+            ? Kept(File("certificate")!, File("anchors"), keeper)
+            : Checked(File("certificate"), File("key"), File("anchors"));
+    }
+
+    /// <summary>The variables a host's environment names its files by, as
+    /// .NET sees them, for the runtime to read in place of its process's: a
+    /// variable .NET set never reaches the process's own on Unix.</summary>
+    internal static JsonObject HostEnvironment()
+    {
+        return new JsonObject
+        {
+            [CertificateVariable] = Environment.GetEnvironmentVariable(CertificateVariable),
+            [PrivateKeyVariable] = Environment.GetEnvironmentVariable(PrivateKeyVariable),
+            [TrustAnchorVariable] = Environment.GetEnvironmentVariable(TrustAnchorVariable),
+        };
     }
 
     /// <summary>
@@ -163,62 +186,25 @@ public sealed partial class SecureSurface
     public static SecureSurface Load(
         string? certificatePath, string? privateKeyPath, string? trustAnchorPath)
     {
-        if ((certificatePath is null) != (privateKeyPath is null))
+        // Named together or not at all, each one there: the runtime's check
+        // (operate::surface::choice::named), the one the command line makes.
+        string asked = new JsonObject
         {
-            throw new InvalidOperationException(
-                $"{CertificateKey} and {PrivateKeyKey} are named together or not at all");
-        }
+            ["certificate"] = certificatePath,
+            ["key"] = privateKeyPath,
+            ["anchors"] = trustAnchorPath,
+            ["kept"] = false,
+        }.ToJsonString();
 
-        foreach (string? named in new[] { certificatePath, privateKeyPath, trustAnchorPath })
-        {
-            if (named is not null && !File.Exists(named))
-            {
-                throw new InvalidOperationException($"{named} is not there");
-            }
-        }
+        return RuntimeLibrary.Rules.Surfaces.Named(asked, out string refused)
+            ? Checked(certificatePath, privateKeyPath, trustAnchorPath)
+            : throw new InvalidOperationException(refused);
+    }
 
+    // The files the runtime checked as it decided a surface.
+    internal static SecureSurface Checked(
+        string? certificatePath, string? privateKeyPath, string? trustAnchorPath)
+    {
         return new SecureSurface((certificatePath, privateKeyPath, trustAnchorPath));
-    }
-
-    /// <summary>
-    /// The certificate chain, its key and the anchors as the PEM text
-    /// <c>xmip-core-library-tls</c> takes them, for a connection the runtime
-    /// makes: a remote surface's to a node's operate listener, which is
-    /// mutual TLS always (ADR-0063). Null with all three read; else what is
-    /// missing, in words.
-    /// </summary>
-    public string? Pem(out string certificate, out string privateKey, out string trustAnchor)
-    {
-        certificate = privateKey = trustAnchor = string.Empty;
-
-        if (Paths.Certificate is null || Paths.PrivateKey is null)
-        {
-            return $"REFUSED. A remote surface presents a certificate: name {CertificateKey} "
-                + $"and {PrivateKeyKey}, or {CertificateVariable} and {PrivateKeyVariable} "
-                + "(ADR-0063 clause 1)";
-        }
-
-        if (Paths.TrustAnchor is null)
-        {
-            return NoAnchors;
-        }
-
-        certificate = File.ReadAllText(Paths.Certificate);
-        privateKey = File.ReadAllText(Paths.PrivateKey);
-        trustAnchor = File.ReadAllText(Paths.TrustAnchor);
-        return null;
-    }
-
-    private static string? Named(
-        IConfiguration configuration, string key, string variable, string basePath)
-    {
-        string? named = configuration[key];
-
-        if (string.IsNullOrWhiteSpace(named))
-        {
-            named = Environment.GetEnvironmentVariable(variable);
-        }
-
-        return string.IsNullOrWhiteSpace(named) ? null : TomlDocument.Resolve(named, basePath);
     }
 }

@@ -1,3 +1,4 @@
+using Xmip.Abi.Operate;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -38,7 +39,9 @@ public sealed record DeadMessageOperation(
     /// <summary>The word the runtime names <paramref name="act"/> by.</summary>
     public static string Word(DeadMessageAct act)
     {
-        return act.ToString().ToLowerInvariant();
+        return act == DeadMessageAct.Replay
+            ? RuntimeLibrary.Rules.Sentences.ActWord(OperateAbi.Act.Replay)
+            : throw new ArgumentOutOfRangeException(nameof(act), act, null);
     }
 
     /// <summary>The act not taken, and why.</summary>

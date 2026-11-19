@@ -112,7 +112,7 @@ public sealed class EnglishTest
             "cluster.xmip is invalid: no name; no cluster",
             English.Validated("cluster.xmip", new(XmipStatus.Invalid, ["no name", "no cluster"])));
         Assert.Equal(
-            $"cluster.xmip is invalid: {XmipStatus.Io.Explain()}",
+            $"cluster.xmip is invalid: {English.Explain(XmipStatus.Io)}",
             English.Validated("cluster.xmip", new(XmipStatus.Io, [])));
     }
 

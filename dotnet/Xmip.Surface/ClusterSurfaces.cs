@@ -170,15 +170,10 @@ public sealed class ClusterSurfaces : IDisposable
             return said;
         }
 
-        string[] roots =
-        [
-            .. surface.Index().Health(ScopeTree.Root)
-                .Select(record => ScopeTree.Segment(record.Scope, 0))
-                .Where(segment => segment.Length > 0)
-                .Distinct(StringComparer.Ordinal),
-        ];
+        // The first segments beneath the root, as the tree lists them.
+        IReadOnlyList<string> roots = surface.Index().Nodes();
 
-        return roots.Length == 1 ? roots[0] : string.Empty;
+        return roots.Count == 1 ? roots[0] : string.Empty;
     }
 
     /// <summary>Whether this set holds a cluster by that name.</summary>

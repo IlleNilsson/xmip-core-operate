@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Xmip.Abi.Operate;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -14,12 +16,10 @@ namespace Xmip.Surface;
 public sealed record SubscriptionQuery
 {
     /// <summary>The columns a list is ordered by, in the order a reader shows
-    /// them. The first is the default.</summary>
-    public static IReadOnlyList<string> Columns { get; } =
-    [
-        "subscription", "cluster", "node", "filter", "destination", "state", "picked-up",
-        "held", "since",
-    ];
+    /// them. The first is the default. The runtime's
+    /// (<c>xmip_list_columns_v1</c>).</summary>
+    public static IReadOnlyList<string> Columns =>
+        RuntimeLibrary.Rules.Sentences.Columns(OperateAbi.List.Subscriptions);
 
     /// <summary>The scope pattern, <c>*</c> and <c>?</c>: a Subscription
     /// matches when its node, or its node and name as one scope, does.</summary>
@@ -60,18 +60,21 @@ public sealed record SubscriptionQuery
         return ScopeTree.Node(subscription.Node);
     }
 
+
     /// <summary>A Subscription as one scope: its node's, then its name —
     /// what a pattern is matched against beside the node.</summary>
     public static string Scope(SubscriptionRecord subscription)
     {
         ArgumentNullException.ThrowIfNull(subscription);
 
-        return $"{subscription.Node}/subscription/{subscription.Name}";
+        return ListQuery.Word(
+            OperateAbi.ListWord.SubscriptionScope, subscription.Node, subscription.Name);
     }
 
     /// <summary>
     /// What this query selects of <paramref name="subscriptions"/>, in its
-    /// order, with ties by node and name.
+    /// order, with ties by node and name: the runtime's
+    /// (<c>operate::surface::subscription_query</c>).
     /// </summary>
     /// <exception cref="ArgumentException">REFUSED: a sort that is no column or
     /// an order that is neither word.</exception>
@@ -79,58 +82,27 @@ public sealed record SubscriptionQuery
     {
         ArgumentNullException.ThrowIfNull(subscriptions);
 
-        string sort = Sort ?? Columns[0];
-        if (!Columns.Contains(sort))
-        {
-            throw new ArgumentException(
-                $"REFUSED: '{sort}' is no column; the columns are {string.Join(", ", Columns)}.");
-        }
-
-        if (Order is not (null or "ascending" or "descending"))
-        {
-            throw new ArgumentException(
-                $"REFUSED: '{Order}' is no order; the orders are ascending, descending.");
-        }
-
-        IEnumerable<SubscriptionRecord> chosen = subscriptions.Where(Selected);
-        IOrderedEnumerable<SubscriptionRecord> ordered = Descending
-            ? chosen.OrderByDescending(entry => Key(entry, sort), Comparer<IComparable>.Default)
-            : chosen.OrderBy(entry => Key(entry, sort), Comparer<IComparable>.Default);
-
-        return
-        [
-            .. ordered
-                .ThenBy(entry => entry.Node, StringComparer.Ordinal)
-                .ThenBy(entry => entry.Name, StringComparer.Ordinal),
-        ];
+        return ListQuery.Chosen(
+            OperateAbi.List.Subscriptions, subscriptions, "subscriptions", Write, writer =>
+            {
+                ListQuery.Text(writer, "pattern", Pattern);
+                ListQuery.Text(writer, "location", Location);
+                ListQuery.Text(writer, "name", Name);
+                ListQuery.Text(writer, "sort", Sort);
+                ListQuery.Text(writer, "order", Order);
+            });
     }
 
-    private bool Selected(SubscriptionRecord subscription)
+    // One Subscription in section 14's JSON: the members the query reads.
+    private static void Write(Utf8JsonWriter writer, SubscriptionRecord entry)
     {
-        bool placed = Location is not { Length: > 0 } location
-            || ScopeTree.Beneath(subscription.Node, location);
-        bool named = Name is not { Length: > 0 } name
-            || string.Equals(subscription.Name, name, StringComparison.Ordinal);
-
-        return placed && named
-            && (Pattern is not { Length: > 0 } pattern
-                || ScopePattern.Matches(subscription.Node, pattern)
-                || ScopePattern.Matches(Scope(subscription), pattern));
-    }
-
-    private static IComparable Key(SubscriptionRecord entry, string sort)
-    {
-        return sort switch
-        {
-            "cluster" => Cluster(entry),
-            "node" => NodeName(entry),
-            "filter" => entry.Filter,
-            "destination" => entry.Destination,
-            "state" => entry.State,
-            "picked-up" => entry.PickedUp,
-            "held" => entry.Held,
-            "since" => entry.Since,
-            _ => entry.Name,
-        };
+        writer.WriteString("node", entry.Node);
+        writer.WriteString("name", entry.Name);
+        writer.WriteString("filter", entry.Filter);
+        writer.WriteString("destination", entry.Destination);
+        writer.WriteString("state", entry.State);
+        writer.WriteNumber("picked_up", entry.PickedUp);
+        writer.WriteNumber("held", entry.Held);
+        writer.WriteNumber("since_unix_nanos", ListQuery.Nanos(entry.Since));
     }
 }

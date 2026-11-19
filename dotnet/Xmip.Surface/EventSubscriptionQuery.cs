@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Xmip.Abi.Operate;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -15,12 +17,10 @@ namespace Xmip.Surface;
 public sealed record EventSubscriptionQuery
 {
     /// <summary>The columns a list is ordered by, in the order a reader shows
-    /// them. The first is the default.</summary>
-    public static IReadOnlyList<string> Columns { get; } =
-    [
-        "subscriber", "cluster", "node", "action", "state", "queued", "delivered", "missed",
-        "since",
-    ];
+    /// them. The first is the default. The runtime's
+    /// (<c>xmip_list_columns_v1</c>).</summary>
+    public static IReadOnlyList<string> Columns =>
+        RuntimeLibrary.Rules.Sentences.Columns(OperateAbi.List.EventSubscriptions);
 
     /// <summary>The scope pattern, <c>*</c> and <c>?</c>: a subscription
     /// matches when its node or the scope its filter reaches does.</summary>
@@ -52,7 +52,8 @@ public sealed record EventSubscriptionQuery
     {
         ArgumentNullException.ThrowIfNull(subscription);
 
-        return subscription.Subscriber.Length > 0 ? subscription.Subscriber : subscription.Party;
+        return ListQuery.Word(
+            OperateAbi.ListWord.EventWho, subscription.Subscriber, subscription.Party);
     }
 
     /// <summary>The cluster a subscription is in: its node's first
@@ -73,9 +74,11 @@ public sealed record EventSubscriptionQuery
         return ScopeTree.Node(subscription.Node);
     }
 
+
     /// <summary>
     /// What this query selects of <paramref name="subscriptions"/>, in its
-    /// order, with ties by node and number.
+    /// order, with ties by node and number: the runtime's
+    /// (<c>operate::surface::event_subscription_query</c>).
     /// </summary>
     /// <exception cref="ArgumentException">REFUSED: a sort that is no column or
     /// an order that is neither word.</exception>
@@ -84,30 +87,8 @@ public sealed record EventSubscriptionQuery
     {
         ArgumentNullException.ThrowIfNull(subscriptions);
 
-        string sort = Sort ?? Columns[0];
-        if (!Columns.Contains(sort))
-        {
-            throw new ArgumentException(
-                $"REFUSED: '{sort}' is no column; the columns are {string.Join(", ", Columns)}.");
-        }
-
-        if (Order is not (null or "ascending" or "descending"))
-        {
-            throw new ArgumentException(
-                $"REFUSED: '{Order}' is no order; the orders are ascending, descending.");
-        }
-
-        IEnumerable<EventSubscriptionRecord> chosen = subscriptions.Where(Selected);
-        IOrderedEnumerable<EventSubscriptionRecord> ordered = Descending
-            ? chosen.OrderByDescending(entry => Key(entry, sort), Comparer<IComparable>.Default)
-            : chosen.OrderBy(entry => Key(entry, sort), Comparer<IComparable>.Default);
-
-        return
-        [
-            .. ordered
-                .ThenBy(entry => entry.Node, StringComparer.Ordinal)
-                .ThenBy(entry => entry.Id),
-        ];
+        return ListQuery.Chosen(
+            OperateAbi.List.EventSubscriptions, subscriptions, "event_subscriptions", Write, Asked);
     }
 
     /// <summary>
@@ -120,7 +101,7 @@ public sealed record EventSubscriptionQuery
     {
         ArgumentNullException.ThrowIfNull(unheard);
 
-        return $"{ScopeTree.Node(unheard.By)}: {unheard.Said}";
+        return ListQuery.Word(OperateAbi.ListWord.UnheardLine, unheard.By, unheard.Said);
     }
 
     /// <summary>
@@ -134,42 +115,48 @@ public sealed record EventSubscriptionQuery
     {
         ArgumentNullException.ThrowIfNull(unheard);
 
-        return
-        [
-            .. unheard
-                .Where(gone => Location is not { Length: > 0 } location
-                    || ScopeTree.Beneath(gone.By, location)
-                    || ScopeTree.Beneath(location, gone.By))
-                .OrderBy(gone => gone.By, StringComparer.Ordinal)
-                .ThenBy(gone => gone.Node, StringComparer.Ordinal),
-        ];
+        UnheardRecord[] given = [.. unheard];
+        string listed = ListQuery.Listed(given, "unheard", WriteUnheard);
+        using JsonDocument answer =
+            ListQuery.Asked(OperateAbi.List.EventSubscriptions, listed, writer =>
+                ListQuery.Text(writer, "location", Location));
+
+        return [.. ListQuery.Places(answer.RootElement, "unheard").Select(at => given[at])];
     }
 
-    private bool Selected(EventSubscriptionRecord subscription)
+    private void Asked(Utf8JsonWriter writer)
     {
-        bool placed = Location is not { Length: > 0 } location
-            || ScopeTree.Beneath(subscription.Node, location);
-        bool numbered = Id is not { } id || subscription.Id == id;
-
-        return placed && numbered
-            && (Pattern is not { Length: > 0 } pattern
-                || ScopePattern.Matches(subscription.Node, pattern)
-                || ScopePattern.Matches(subscription.Scope, pattern));
-    }
-
-    private static IComparable Key(EventSubscriptionRecord entry, string sort)
-    {
-        return sort switch
+        ListQuery.Text(writer, "pattern", Pattern);
+        ListQuery.Text(writer, "location", Location);
+        if (Id is { } id)
         {
-            "cluster" => Cluster(entry),
-            "node" => NodeName(entry),
-            "action" => entry.Action,
-            "state" => entry.State,
-            "queued" => entry.Queued,
-            "delivered" => entry.Delivered,
-            "missed" => entry.Missed,
-            "since" => entry.Since,
-            _ => Who(entry),
-        };
+            writer.WriteNumber("id", id);
+        }
+
+        ListQuery.Text(writer, "sort", Sort);
+        ListQuery.Text(writer, "order", Order);
+    }
+
+    // One Event subscription in section 15's JSON: the members the query reads.
+    private static void Write(Utf8JsonWriter writer, EventSubscriptionRecord entry)
+    {
+        writer.WriteString("node", entry.Node);
+        writer.WriteNumber("id", entry.Id);
+        writer.WriteString("subscriber", entry.Subscriber);
+        writer.WriteString("party", entry.Party);
+        writer.WriteString("action", entry.Action);
+        writer.WriteString("scope", entry.Scope);
+        writer.WriteString("state", entry.State);
+        writer.WriteNumber("queued", entry.Queued);
+        writer.WriteNumber("delivered", entry.Delivered);
+        writer.WriteNumber("missed", entry.Missed);
+        writer.WriteNumber("since_unix_nanos", ListQuery.Nanos(entry.Since));
+    }
+
+    // One member not heard in section 15's JSON: the members the query reads.
+    private static void WriteUnheard(Utf8JsonWriter writer, UnheardRecord entry)
+    {
+        writer.WriteString("by", entry.By);
+        writer.WriteString("node", entry.Node);
     }
 }

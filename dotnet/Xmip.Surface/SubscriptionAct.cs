@@ -1,3 +1,4 @@
+using Xmip.Abi.Operate;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -41,7 +42,12 @@ public sealed record SubscriptionOperation(
     /// <summary>The word the runtime names <paramref name="act"/> by.</summary>
     public static string Word(SubscriptionAct act)
     {
-        return act.ToString().ToLowerInvariant();
+        return RuntimeLibrary.Rules.Sentences.ActWord(act switch
+        {
+            SubscriptionAct.Pause => OperateAbi.Act.Pause,
+            SubscriptionAct.Resume => OperateAbi.Act.Resume,
+            _ => throw new ArgumentOutOfRangeException(nameof(act), act, null),
+        });
     }
 
     /// <summary>The act not taken, and why.</summary>

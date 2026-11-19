@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 
 namespace Xmip.Surface;
@@ -15,9 +16,10 @@ public static partial class SurfaceChoice
     /// (<see cref="LocalOperator.Unnamed"/>). The runtime library
     /// <see cref="RuntimeLibrary.Stated"/> finds is what every one of them
     /// calls the runtime through, and chooses none. Not yet asked to answer, so
-    /// the precedence is tested without a runtime or a network. Held here for
-    /// the executable and the PowerShell module alike (ADR-0052 clause 1);
-    /// until 2026-09-24 the executable wrote it and the prompt wrote it again.
+    /// the precedence is tested without a network. The runtime decides it
+    /// (section 28.2), the one precedence the command line keeps in Rust
+    /// (ADR-0052 clause 1, amendment 2026-11-18); until 2026-09-24 the
+    /// executable wrote it and the prompt wrote it again.
     /// A node named on the line that gathers its cluster's view answers for
     /// the whole cluster (<see cref="ListenerOperator.Gathers"/>).
     /// </summary>
@@ -45,15 +47,17 @@ public static partial class SurfaceChoice
         // library the line states is stated before the read (Answering).
         _ = RuntimeLibrary.Stated(line.Runtime, besideExecutable);
 
-        return !string.IsNullOrWhiteSpace(line.Remote)
-            ? new RemoteOperator(line.Remote, SecureSurface.From(document, basePath))
-            : !string.IsNullOrWhiteSpace(line.Local)
-                ? new LocalOperator(line.Local)
-                : !string.IsNullOrWhiteSpace(line.Snapshot)
-                    ? new SnapshotOperator(TomlDocument.Resolve(line.Snapshot, basePath))
-                    : IsChosen(document)
-                        ? OpenFirst(document, basePath)
-                        : new LocalOperator(null);
+        // The precedence is the runtime's, the one the command line keeps
+        // (operate::surface::choice::decided).
+        return Opened(
+            new JsonObject
+            {
+                ["asked"] = "line",
+                ["remote"] = line.Remote,
+                ["local"] = line.Local,
+                ["snapshot"] = line.Snapshot,
+            },
+            document, basePath, keeper: null);
     }
 
     /// <summary>

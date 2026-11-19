@@ -1,5 +1,3 @@
-using System.Globalization;
-
 namespace Xmip.Surface;
 
 /// <summary>
@@ -36,68 +34,17 @@ public sealed record ScopeSelection(
     /// An empty argument is where the publisher publishes, the cluster
     /// (<see cref="IOperatorSurface.Root"/>).
     /// </summary>
+    /// <remarks>Whether it is a pattern, the topmost of what it matches and
+    /// the refusal are <c>operate::surface::ScopeSelection::over</c>'s, asked
+    /// of the runtime over the surface's tree
+    /// (<c>xmip_scope_index_select_v1</c>).</remarks>
     public static ScopeSelection? Of(
         IOperatorSurface surface, string argument, out string refusal)
     {
         ArgumentNullException.ThrowIfNull(surface);
 
-        refusal = string.Empty;
         string pattern = string.IsNullOrEmpty(argument) ? surface.Root() : argument;
 
-        if (!ScopePattern.HasWildcard(pattern))
-        {
-            return Exactly(pattern);
-        }
-
-        ScopeIndex index = surface.Index();
-        IReadOnlyList<string> chosen = ScopePattern.Topmost(index.Matching(pattern));
-
-        if (chosen.Count == 0)
-        {
-            refusal = Refusal(index, pattern, surface.Source);
-            return null;
-        }
-
-        return new ScopeSelection(pattern, true, chosen);
-    }
-
-    /// <summary>The refusal, in the estate's words: what was asked for, what
-    /// there is where it was asked, and where the answer came from.</summary>
-    private static string Refusal(ScopeIndex index, string pattern, string source)
-    {
-        const int most = 12;
-        string under = ScopePattern.Normal(Literal(pattern));
-        IReadOnlyList<Branch> beneath = index.Branches(under);
-        string named = string.Join(
-            ", ",
-            beneath.Select(branch => branch.Label).Order(StringComparer.Ordinal).Take(most));
-        string rest = beneath.Count > most
-            ? string.Create(CultureInfo.InvariantCulture, $" and {beneath.Count - most:N0} more")
-            : string.Empty;
-        string what = beneath.Count == 0
-            ? string.Create(
-                CultureInfo.InvariantCulture, $"{index.Scopes:N0} scope(s) published")
-            : $"beneath {under} there is: {named}{rest}";
-
-        return $"REFUSED  no scope matches {pattern}{Environment.NewLine}"
-            + $"         {what}{Environment.NewLine}"
-            + $"         source {source}";
-    }
-
-    /// <summary>The part of a pattern that is still literal: everything down to
-    /// the last <c>/</c> before its first wildcard — the place to say what
-    /// there is instead.</summary>
-    private static string Literal(string pattern)
-    {
-        int wild = pattern.IndexOfAny(['*', '?']);
-
-        if (wild < 0)
-        {
-            return pattern;
-        }
-
-        int slash = pattern.LastIndexOf('/', wild);
-
-        return slash <= 0 ? ScopeTree.Root : pattern[..slash];
+        return surface.Index().Select(pattern, surface.Source, out refusal);
     }
 }

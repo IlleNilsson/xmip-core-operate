@@ -78,8 +78,14 @@ public sealed record FailedMessageList(
         using JsonDocument answer = JsonDocument.Parse(json);
         JsonElement root = answer.RootElement;
 
+        // A surface's list (section 28.2) says whether it is one, and why
+        // not; section 16's is always one.
         return new FailedMessageList(
-            [.. root.GetProperty("failed_messages").EnumerateArray().Select(Port)]);
+            [.. root.GetProperty("failed_messages").EnumerateArray().Select(Port)],
+            !root.TryGetProperty("listed", out JsonElement listed) || listed.GetBoolean(),
+            root.TryGetProperty("failure", out JsonElement failure)
+                ? failure.GetString() ?? string.Empty
+                : string.Empty);
     }
 
     private static FailedMessagePort Port(JsonElement port)

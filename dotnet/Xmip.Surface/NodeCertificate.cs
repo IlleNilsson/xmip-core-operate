@@ -14,8 +14,12 @@ namespace Xmip.Surface;
 public static class NodeCertificate
 {
     /// <summary>The authority's name where a cluster's authority is made
-    /// here: the cluster's.</summary>
-    public static string AuthorityName(string cluster) => $"Xmip cluster {cluster} authority";
+    /// here: the cluster's, as the runtime names it
+    /// (<c>xmip_authority_name_v1</c>).</summary>
+    public static string AuthorityName(string cluster)
+    {
+        return RuntimeLibrary.Rules.Certificates.AuthorityName(cluster);
+    }
 
     /// <summary>
     /// The node <paramref name="node"/> of <paramref name="cluster"/> issued

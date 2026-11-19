@@ -36,15 +36,13 @@ use abi::operate::audit::kept;
 use audit_file::FileSink;
 use serde_json::{Map, Value, json};
 use xaudit::audit_chain::Verdict;
-use xaudit::audit_column::Column;
 use xaudit::audit_entry::AuditEntry;
 use xaudit::audit_fragment::Fragment;
-use xaudit::audit_query::{AuditGroup, AuditQuery};
-use xaudit::audit_store;
+use xaudit::audit_query::AuditGroup;
 use xaudit::emit::AuditOutcome;
 use xaudit::program_audit::ProgramAudit;
-use xcore::Severity;
 
+use crate::audit_read::{self, Unread};
 use crate::ffi::rule::refuse;
 use crate::ffi::text::scope_text;
 use crate::wire::{from_wire_phase, from_wire_severity};
@@ -176,8 +174,8 @@ unsafe fn audited(
     status::OK
 }
 
-/// `xmip_audit_read_v1`: [`audit_store::ask`] with an [`AuditQuery`], as
-/// the header's JSON.
+/// `xmip_audit_read_v1`: `crate::audit_read::read`, the capability's one
+/// reader, as the header's JSON.
 ///
 /// # Safety
 /// As the header states: `directory` readable for its length, `query`
@@ -232,40 +230,28 @@ unsafe fn audit_read(
 }
 
 /// The read, the status it ends in and the text it writes.
+/// The read is `crate::audit_read::read`'s, the one the command line calls;
+/// this writes it as the header's JSON.
 fn answer(directory: &str, query: &[(String, String)]) -> (i32, String) {
-    let asked = match AuditQuery::from_pairs(query.iter().map(|(k, v)| (k.as_str(), v.as_str()))) {
-        Ok(asked) => asked,
-        Err(refusal) => return (status::INVALID, refusal),
-    };
     let stated = (!directory.is_empty()).then(|| Path::new(directory));
-    let Some(file) = audit_store::stated(stated) else {
-        let none = json!({"file": "", "read": 0, "matched": 0, "offset": asked.offset,
-            "limit": asked.limit, "records": [], "groups": [], "actions": [], "chains": [],
-            "fragments": [],
-            "columns": Column::ALL.map(Column::word),
-            "severities": Severity::ALL.map(Severity::word)});
-        return (status::OK, none.to_string());
-    };
-    // A page is read from the file a page at a time; a verification walks the
-    // file's bytes as they are now (ADR-0070 clause 5), and says the bytes no
-    // write finished apart from the chains.
-    let page = match audit_store::ask(&file, &asked) {
+    let page = match audit_read::read(stated, query) {
         Ok(page) => page,
-        Err(error) => return (status::IO, error.to_string()),
+        Err(Unread::Refused(refusal)) => return (status::INVALID, refusal),
+        Err(Unread::Io(failure)) => return (status::IO, failure),
     };
     let answer = json!({
-        "file": file.display().to_string(),
+        "file": page.file,
         "read": page.read,
         "matched": page.matched,
-        "offset": asked.offset,
-        "limit": asked.limit,
+        "offset": page.offset,
+        "limit": page.limit,
         "records": page.records.iter().map(record).collect::<Vec<_>>(),
         "groups": page.groups.iter().map(group).collect::<Vec<_>>(),
         "actions": page.actions,
         "chains": page.chains.iter().map(chain).collect::<Vec<_>>(),
         "fragments": page.fragments.iter().map(fragment).collect::<Vec<_>>(),
-        "columns": Column::ALL.map(Column::word),
-        "severities": Severity::ALL.map(Severity::word),
+        "columns": page.columns,
+        "severities": page.severities,
     });
 
     (status::OK, answer.to_string())
@@ -516,7 +502,8 @@ mod tests {
         assert_eq!(code, status::OK, "{said}");
         assert_eq!(kept_as, kept::PERSISTED);
         assert!(said.is_empty(), "{said}");
-        let text = fs::read_to_string(directory.join(audit_store::FILE_NAME)).expect("read");
+        let text =
+            fs::read_to_string(directory.join(xaudit::audit_store::FILE_NAME)).expect("read");
         assert!(
             text.contains("program = \"xmip-core-runtime tests\""),
             "{text}"

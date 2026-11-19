@@ -1,4 +1,3 @@
-using Xmip.Abi.Module;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -12,16 +11,9 @@ public abstract partial class ListenerOperator
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        if (this.node is null)
-        {
-            throw new InvalidOperationException(Source);
-        }
-
-        XmipStatus status = this.node.Secrets(caller, node, out string text);
-
-        return status == XmipStatus.Ok
-            ? SecretRecord.Listed(text)
-            : throw new InvalidOperationException(text);
+        return held.Node.Secrets(caller, node, out string said)
+            ? SecretRecord.Listed(said)
+            : throw new InvalidOperationException(said);
     }
 
     /// <inheritdoc />
@@ -31,20 +23,7 @@ public abstract partial class ListenerOperator
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(name);
 
-        if (this.node is null)
-        {
-            return SecretOperation.Declined(node, name, Source);
-        }
-
-        XmipStatus status =
-            this.node.SetSecret(caller, node, name, kind, value, out string said);
-
-        if (status == XmipStatus.Unavailable)
-        {
-            IsConnected = false;
-            Reason = said;
-        }
-
-        return new SecretOperation(node, name, status == XmipStatus.Ok, said);
+        (bool applied, string result) = held.Node.SetSecret(caller, node, name, kind, value);
+        return new SecretOperation(node, name, applied, result);
     }
 }
