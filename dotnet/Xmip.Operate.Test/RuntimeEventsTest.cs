@@ -99,7 +99,7 @@ public sealed class RuntimeEventsTest
 internal sealed class Audited : IDisposable
 {
     public string Directory { get; } =
-        Path.Combine(Path.GetTempPath(), $"xmip-operate-event-{Guid.NewGuid():n}");
+        System.IO.Directory.CreateTempSubdirectory("xmip-operate-event-").FullName;
 
     private static readonly TestCluster Cluster = TestCluster.Read();
 

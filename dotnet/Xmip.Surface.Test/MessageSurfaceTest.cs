@@ -31,13 +31,7 @@ public sealed class MessageSurfaceTest : IDisposable
     private static readonly string Sending = $"{Cluster.Scope}/node/{Sender}";
     private static readonly string Port = $"{Sending}/send/invoices";
 
-    private readonly string scratch =
-        Path.Combine(Path.GetTempPath(), $"xmip-journey-{Guid.NewGuid():N}");
-
-    public MessageSurfaceTest()
-    {
-        Directory.CreateDirectory(scratch);
-    }
+    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-journey-").FullName;
 
     private string Audit => Path.Combine(scratch, "audit");
 

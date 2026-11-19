@@ -14,8 +14,8 @@ public sealed class RuntimeAuditTest
     [Fact]
     public void ARecordMadeFromDotNetIsReadBackWhole()
     {
-        string directory = Path.Combine(
-            Path.GetTempPath(), $"xmip-operate-audit-read-{Environment.ProcessId}");
+        string directory = Directory.CreateTempSubdirectory(
+            $"xmip-operate-audit-read-{Environment.ProcessId}-").FullName;
         RuntimeAudit audit = RuntimeRulesTest.Rules.Audit;
 
         try

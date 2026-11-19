@@ -13,8 +13,8 @@ public sealed class SurfaceArrivalTest : IDisposable
 
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
 
-    private readonly string _place =
-        Path.Combine(Path.GetTempPath(), $"xmip-arrival-{Guid.NewGuid():N}");
+    // Made, and the publication's directory two levels beneath it not.
+    private readonly string _place = Directory.CreateTempSubdirectory("xmip-arrival-").FullName;
 
     [Fact]
     public async Task ASnapshotWatchBegunBeforeItsDirectoryFollowsOnceItIsMade()
@@ -61,12 +61,6 @@ public sealed class SurfaceArrivalTest : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(_place, recursive: true);
-        }
-        catch (DirectoryNotFoundException)
-        {
-        }
+        Directory.Delete(_place, recursive: true);
     }
 }

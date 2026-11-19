@@ -25,8 +25,7 @@ internal sealed class TestAuthority : IDisposable
 
     public TestAuthority(string name)
     {
-        Directory = Path.Combine(Path.GetTempPath(), $"xmip-tls-{name}-{Guid.NewGuid():n}");
-        System.IO.Directory.CreateDirectory(Directory);
+        Directory = System.IO.Directory.CreateTempSubdirectory($"xmip-tls-{name}-").FullName;
 
         CertificateRequest request =
             new($"CN=Xmip test anchor {name}", key, HashAlgorithmName.SHA256);

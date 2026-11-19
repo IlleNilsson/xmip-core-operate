@@ -93,8 +93,7 @@ public sealed class ClusterListTest
     [Fact]
     public void ASurfaceThatHasPublishedNothingYetIsNamedByItsFirstPublication()
     {
-        string area = Path.Combine(Path.GetTempPath(), $"xmip-cluster-list-{Guid.NewGuid():n}");
-        Directory.CreateDirectory(area);
+        string area = Directory.CreateTempSubdirectory("xmip-cluster-list-").FullName;
         string later = Path.Combine(area, "later.xmip");
 
         try
@@ -132,8 +131,7 @@ public sealed class ClusterListTest
     [Fact]
     public void ALaterNameAnotherClusterHoldsIsNotTakenTwice()
     {
-        string area = Path.Combine(Path.GetTempPath(), $"xmip-cluster-list-{Guid.NewGuid():n}");
-        Directory.CreateDirectory(area);
+        string area = Directory.CreateTempSubdirectory("xmip-cluster-list-").FullName;
         string later = Path.Combine(area, "later.xmip");
 
         try
@@ -167,8 +165,7 @@ public sealed class ClusterListTest
     {
         public Papers(string toml)
         {
-            Directory = Path.Combine(Path.GetTempPath(), $"xmip-cluster-list-{Guid.NewGuid():n}");
-            System.IO.Directory.CreateDirectory(Directory);
+            Directory = System.IO.Directory.CreateTempSubdirectory("xmip-cluster-list-").FullName;
             string file = Path.Combine(Directory, "gui.toml");
             File.WriteAllText(file, toml);
             Configuration = TomlDocument.Read(file);

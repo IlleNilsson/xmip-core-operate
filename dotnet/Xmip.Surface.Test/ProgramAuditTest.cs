@@ -13,7 +13,7 @@ public sealed class ProgramAuditTest
 {
     private static string Scratch()
     {
-        return Path.Combine(Path.GetTempPath(), $"xmip-surface-audit-{Guid.NewGuid():n}");
+        return Directory.CreateTempSubdirectory("xmip-surface-audit-").FullName;
     }
 
     [Fact]
