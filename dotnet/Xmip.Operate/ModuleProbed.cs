@@ -49,7 +49,7 @@ public sealed record ModuleProbed(
     public bool Loaded => Unloadable.Length == 0;
 
     /// <summary>The status as one line an operator reads.</summary>
-    public string Meaning => Status.Explain();
+    public string Meaning => RuntimeWords.Explain((int)Status);
 
     /// <summary>The header's JSON, read.</summary>
     internal static ModuleProbed Read(string json)

@@ -8,17 +8,14 @@
 //! and writes its answer where it was told.
 #![allow(unsafe_code)]
 
-use std::path::Path;
-
 use abi::ffi::{Str, status};
-use runtime::ffi::probed::{self, Probed};
-use serde_json::json;
 
 use crate::ffi::rule::refuse;
 use crate::ffi::text::scope_text;
+use crate::module_probe;
 
-/// `xmip_module_probe_v1`: [`probed::probe`], answered as the header's
-/// JSON.
+/// `xmip_module_probe_v1`: `crate::module_probe::probe`, the one the command
+/// line calls, answered as the header's JSON.
 ///
 /// # Safety
 /// As the header states: `library` readable for its length, `out` room for
@@ -37,7 +34,7 @@ pub unsafe extern "C" fn xmip_module_probe_v1(
             return status::MALFORMED;
         };
 
-        let answer = said(library, &probed::probe(Path::new(library)));
+        let answer = module_probe::probe(library).to_json().to_string();
 
         // SAFETY: `out` has room for `cap` bytes and `out_len` is writable,
         // per the contract; the answer takes the text shape a refusal does.
@@ -46,36 +43,11 @@ pub unsafe extern "C" fn xmip_module_probe_v1(
     })
 }
 
-/// The probe as the header's JSON: every member always there, the
-/// descriptor's empty where the module made no instance.
-fn said(library: &str, probed: &Probed) -> String {
-    let declared = probed.descriptor.as_ref();
-    let text = |read: fn(&abi::ModuleDescriptor) -> String| declared.map(read).unwrap_or_default();
-
-    json!({
-        "library": library,
-        "unloadable": probed.unloadable,
-        "status": probed.status,
-        "provider": text(|d| d.provider.clone()),
-        "module": text(|d| d.module.clone()),
-        "standard": text(|d| d.standard.clone()),
-        "abi_version": declared.map_or(0, |d| d.abi_version),
-        "trait_version": text(|d| format!("{}.{}", d.trait_major, d.trait_minor)),
-        "module_version": text(|d| {
-            format!("{}.{}.{}", d.module_major, d.module_minor, d.module_patch)
-        }),
-        "last_error": probed.last_error,
-        "refusal": probed.refusal,
-        "conforms": probed.conforms(),
-        "log": probed.log,
-    })
-    .to_string()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ffi::text::borrow;
+    use serde_json::json;
 
     #[test]
     fn the_export_has_the_shape_the_binding_declares() {

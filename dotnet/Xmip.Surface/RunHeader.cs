@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -13,7 +15,10 @@ namespace Xmip.Surface;
 /// test run, which a view leaves out until asked to show it. <see cref="Real"/>
 /// are the nodes on machines of their own, never spawned, and every other
 /// node is simulated (ADR-0028, amendment 2026-10-21): a green board means
-/// two different things in the two cases, and the line says which.
+/// two different things in the two cases, and the line says which. Whether
+/// it said anything, its line and what it started each node with are the
+/// runtime's (<c>operate::surface::run_header</c>, asked through
+/// <c>xmip_run_said_v1</c>), so every surface says the one line.
 /// </summary>
 public sealed record RunHeader(
     string Cluster,
@@ -33,8 +38,14 @@ public sealed record RunHeader(
     public IReadOnlyList<string> RealNodes => Real ?? [];
 
     /// <summary>Whether the publisher said anything.</summary>
-    public bool Said =>
-        Cluster.Length > 0 || Tests.Count > 0 || Nodes.Count > 0 || Stress.Length > 0;
+    public bool Said
+    {
+        get
+        {
+            JsonElement said = Asked();
+            return said.GetProperty("said").GetBoolean();
+        }
+    }
 
     /// <summary>
     /// What one node was started with, by name — its roles in
@@ -46,13 +57,23 @@ public sealed record RunHeader(
     /// </summary>
     public NodeCapability Capability(string node)
     {
-        foreach (string entry in Roles)
-        {
-            NodeCapability started = NodeCapability.Started(entry);
+        JsonElement said = Asked();
 
-            if (string.Equals(started.Node, node, StringComparison.Ordinal))
+        foreach (JsonElement started in said.GetProperty("started").EnumerateArray())
+        {
+            if (string.Equals(Text(started, "node"), node, StringComparison.Ordinal))
             {
-                return started with { Online = Online.Contains(node, StringComparer.Ordinal) };
+                IReadOnlyList<string> roles =
+                [
+                    .. started.GetProperty("roles").EnumerateArray()
+                        .Select(role => role.GetString() ?? string.Empty),
+                ];
+
+                return new NodeCapability(
+                    node, roles, started.GetProperty("online").GetBoolean(), false, string.Empty)
+                {
+                    Refusal = Text(started, "refusal"),
+                };
             }
         }
 
@@ -65,56 +86,14 @@ public sealed record RunHeader(
     /// &lt;other&gt;=processing+sending · online &lt;node&gt; · realistic</c>. A
     /// node is named with the roles it declared, because bare names say
     /// nothing a board could be told apart by; a publisher that says no roles
-    /// leaves the names bare, as before. The names are the operator's and mean
-    /// nothing to Xmip (ADR-0053). A part the publisher left out is left out;
-    /// no nodes and none online are said in words, because both are choices.
+    /// leaves the names bare. The names are the operator's and mean nothing to
+    /// Xmip (ADR-0053). A part the publisher left out is left out; no nodes
+    /// and none online are said in words, because both are choices.
     /// </summary>
     public string Line()
     {
-        if (!Said)
-        {
-            return string.Empty;
-        }
-
-        List<string> parts = [];
-
-        if (Tests.Count > 0)
-        {
-            parts.Add(string.Join(' ', Tests));
-        }
-
-        if (Cluster.Length > 0)
-        {
-            parts.Add(Cluster);
-        }
-
-        parts.Add(Nodes.Count > 0
-            ? $"nodes {string.Join(' ', Nodes.Select(Declared))}"
-            : "no nodes");
-
-        if (Nodes.Count > 0)
-        {
-            parts.Add(Online.Count > 0 ? $"online {string.Join(' ', Online)}" : "none online");
-
-            // On one computer every node is simulated, and the line is what
-            // it was; a run that found real nodes says which.
-            if (RealNodes.Count > 0)
-            {
-                parts.Add($"real {string.Join(' ', RealNodes)}, the rest simulated");
-            }
-        }
-
-        if (Stress.Length > 0)
-        {
-            parts.Add(Stress);
-        }
-
-        if (Hidden)
-        {
-            parts.Add("hidden test run");
-        }
-
-        return string.Join(" · ", parts);
+        JsonElement said = Asked();
+        return Text(said, "line");
     }
 
     /// <summary>The run a publication says it was started with, as the
@@ -129,20 +108,47 @@ public sealed record RunHeader(
                 run.Hidden, run.Real);
     }
 
-    /// <summary>A node as the run line names it: the publisher's own
-    /// <c>[run].roles</c> entry for it, or the bare name when the publisher
-    /// said nothing of its roles.</summary>
-    private string Declared(string node)
-    {
-        foreach (string entry in Roles)
-        {
-            if (string.Equals(NodeCapability.Started(entry).Node, node, StringComparison.Ordinal))
-            {
-                return entry;
-            }
-        }
+    // The runtime's answer, asked once per record: a record does not change,
+    // and a view asks it each time it is drawn.
+    private static readonly ConditionalWeakTable<RunHeader, StrongBox<JsonElement>> Answers = [];
 
-        return node;
+    // The run as the runtime says it, from its observe::Run JSON.
+    private JsonElement Asked()
+    {
+        return Answers.GetValue(this, static held => held.Ask()).Value;
     }
 
+    private StrongBox<JsonElement> Ask()
+    {
+        string run = JsonText.Document(writer =>
+        {
+            writer.WriteString("cluster", Cluster);
+            Write(writer, "tests", Tests);
+            Write(writer, "nodes", Nodes);
+            Write(writer, "roles", Roles);
+            Write(writer, "online", Online);
+            Write(writer, "real", RealNodes);
+            writer.WriteString("stress", Stress);
+            writer.WriteBoolean("hidden", Hidden);
+        });
+
+        using JsonDocument said = JsonDocument.Parse(RuntimeLibrary.Rules.Sentences.RunSaid(run));
+        return new StrongBox<JsonElement>(said.RootElement.Clone());
+    }
+
+    private static void Write(Utf8JsonWriter writer, string name, IReadOnlyList<string> texts)
+    {
+        writer.WriteStartArray(name);
+        foreach (string text in texts)
+        {
+            writer.WriteStringValue(text);
+        }
+
+        writer.WriteEndArray();
+    }
+
+    private static string Text(JsonElement said, string name)
+    {
+        return said.GetProperty(name).GetString() ?? string.Empty;
+    }
 }

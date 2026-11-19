@@ -107,14 +107,13 @@ public static class RuntimeLibrary
 
     /// <summary>
     /// The library an operator stated, over the rule: a path typed for this
-    /// one invocation — <c>xmip --runtime</c>, <c>-Library</c> on a cmdlet
-    /// — wins and is taken from the current directory; a blank one is no
-    /// statement, and then the environment and
-    /// <paramref name="besideExecutable"/> decide as <see cref="Choose"/>
-    /// says. Stated before a document is read, since reading one loads the
-    /// library. One precedence for the command line and PowerShell (ADR-0052
-    /// clause 1); until 2026-09-24 the cli held it alone and every cmdlet
-    /// demanded a path.
+    /// one invocation — <c>-Library</c> on a cmdlet — wins and is taken from
+    /// the current directory; a blank one is no statement, and then the
+    /// environment and <paramref name="besideExecutable"/> decide as
+    /// <see cref="Choose"/> says. Stated before a document is read, since
+    /// reading one loads the library. One precedence for every .NET surface
+    /// (ADR-0052 clause 1); the command line links the runtime and states
+    /// none (ADR-0014, amendment 2026-11-17).
     /// </summary>
     public static string Stated(string? overridden, string besideExecutable)
     {

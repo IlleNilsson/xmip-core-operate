@@ -23,10 +23,19 @@ pub fn read(text: &str) -> Result<String, String> {
 /// # Errors
 /// It is not a JSON object, it holds a null, or TOML cannot write it.
 pub fn write(json: &str) -> Result<String, String> {
+    configure::document::write(&table_of(json)?)
+}
+
+/// `json`, a JSON object, as the TOML table it writes: what a host's own
+/// reader read of its document, handed across (section 28.2).
+///
+/// # Errors
+/// It is not a JSON object, or it holds a null.
+pub(crate) fn table_of(json: &str) -> Result<Table, String> {
     let Json::Object(document) = parsed(json)? else {
         return Err("a document is a JSON object".to_string());
     };
-    configure::document::write(&table(&document)?)
+    table(&document)
 }
 
 /// `text` with one key set or removed, as `edit` says:

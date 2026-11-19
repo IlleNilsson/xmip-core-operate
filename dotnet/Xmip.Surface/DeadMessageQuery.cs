@@ -1,3 +1,5 @@
+using System.Text.Json;
+using Xmip.Abi.Operate;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -14,11 +16,10 @@ namespace Xmip.Surface;
 public sealed record DeadMessageQuery
 {
     /// <summary>The columns a list is ordered by, in the order a reader shows
-    /// them. The first is the default: the oldest first.</summary>
-    public static IReadOnlyList<string> Columns { get; } =
-    [
-        "received", "message", "cluster", "node", "receive-location", "declines",
-    ];
+    /// them. The first is the default: the oldest first. The runtime's
+    /// (<c>xmip_list_columns_v1</c>).</summary>
+    public static IReadOnlyList<string> Columns =>
+        RuntimeLibrary.Rules.Sentences.Columns(OperateAbi.List.DeadMessages);
 
     /// <summary>The scope pattern, <c>*</c> and <c>?</c>: an entry matches
     /// when its node, or its node and Message as one scope, does.</summary>
@@ -64,12 +65,13 @@ public sealed record DeadMessageQuery
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        return $"{entry.Node}/{DeadMessageOperation.Noun}/{entry.Message}";
+        return ListQuery.Word(OperateAbi.ListWord.DeadMessageScope, entry.Node, entry.Message);
     }
 
     /// <summary>
     /// What this query selects of <paramref name="entries"/>, in its order,
-    /// with ties by node and place in the queue.
+    /// with ties by node and place in the queue: the runtime's
+    /// (<c>operate::surface::dead_message_query</c>).
     /// </summary>
     /// <exception cref="ArgumentException">REFUSED: a sort that is no column or
     /// an order that is neither word.</exception>
@@ -77,55 +79,34 @@ public sealed record DeadMessageQuery
     {
         ArgumentNullException.ThrowIfNull(entries);
 
-        string sort = Sort ?? Columns[0];
-        if (!Columns.Contains(sort))
-        {
-            throw new ArgumentException(
-                $"REFUSED: '{sort}' is no column; the columns are {string.Join(", ", Columns)}.");
-        }
-
-        if (Order is not (null or "ascending" or "descending"))
-        {
-            throw new ArgumentException(
-                $"REFUSED: '{Order}' is no order; the orders are ascending, descending.");
-        }
-
-        IEnumerable<DeadMessageRecord> chosen = entries.Where(Selected);
-        IOrderedEnumerable<DeadMessageRecord> ordered = Descending
-            ? chosen.OrderByDescending(entry => Key(entry, sort), Comparer<IComparable>.Default)
-            : chosen.OrderBy(entry => Key(entry, sort), Comparer<IComparable>.Default);
-
-        return
-        [
-            .. ordered
-                .ThenBy(entry => entry.Node, StringComparer.Ordinal)
-                .ThenBy(entry => entry.Sequence),
-        ];
+        return ListQuery.Chosen(
+            OperateAbi.List.DeadMessages, entries, "dead_messages", Write, writer =>
+            {
+                ListQuery.Text(writer, "pattern", Pattern);
+                ListQuery.Text(writer, "location", Location);
+                ListQuery.Text(writer, "message", Message);
+                ListQuery.Text(writer, "sort", Sort);
+                ListQuery.Text(writer, "order", Order);
+            });
     }
 
-    private bool Selected(DeadMessageRecord entry)
+    // One entry in section 16's JSON: the members the query reads, each
+    // decline an empty pair, since it orders by how many there are and reads
+    // none of their words.
+    private static void Write(Utf8JsonWriter writer, DeadMessageRecord entry)
     {
-        bool placed = Location is not { Length: > 0 } location
-            || ScopeTree.Beneath(entry.Node, location);
-        bool named = Message is not { Length: > 0 } message
-            || string.Equals(entry.Message, message, StringComparison.Ordinal);
-
-        return placed && named
-            && (Pattern is not { Length: > 0 } pattern
-                || ScopePattern.Matches(entry.Node, pattern)
-                || ScopePattern.Matches(Scope(entry), pattern));
-    }
-
-    private static IComparable Key(DeadMessageRecord entry, string sort)
-    {
-        return sort switch
+        writer.WriteString("node", entry.Node);
+        writer.WriteString("message", entry.Message);
+        writer.WriteNumber("sequence", entry.Sequence);
+        writer.WriteString("location", entry.ReceiveLocation);
+        writer.WriteNumber("received_unix_nanos", ListQuery.Nanos(entry.Received));
+        writer.WriteStartArray("declines");
+        for (int decline = 0; decline < entry.Declines.Count; decline++)
         {
-            "message" => entry.Message,
-            "cluster" => Cluster(entry),
-            "node" => NodeName(entry),
-            "receive-location" => entry.ReceiveLocation,
-            "declines" => entry.Declines.Count,
-            _ => entry.Received,
-        };
+            writer.WriteStartArray();
+            writer.WriteEndArray();
+        }
+
+        writer.WriteEndArray();
     }
 }

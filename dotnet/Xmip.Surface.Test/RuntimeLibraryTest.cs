@@ -33,8 +33,8 @@ public sealed class RuntimeLibraryTest
     [Fact]
     public void ALibraryStatedForTheInvocationWinsOverEverything()
     {
-        // xmip --runtime and a cmdlet's -Library: the one precedence, taken
-        // from the current directory.
+        // A cmdlet's -Library: the one precedence, taken from the current
+        // directory.
         Assert.Equal(
             Path.GetFullPath("override.dll"), RuntimeLibrary.Stated("override.dll", Beside));
     }

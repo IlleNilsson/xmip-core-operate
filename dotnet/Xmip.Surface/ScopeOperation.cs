@@ -17,6 +17,6 @@ public sealed record ScopeOperation(
     /// </summary>
     public static string Who(string? stated)
     {
-        return string.IsNullOrWhiteSpace(stated) ? Environment.UserName : stated.Trim();
+        return RuntimeLibrary.Rules.Sentences.Who(stated, Environment.UserName);
     }
 }

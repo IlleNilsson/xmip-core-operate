@@ -1,3 +1,5 @@
+using Xmip.Operate;
+
 namespace Xmip.Surface;
 
 /// <summary>
@@ -9,51 +11,36 @@ namespace Xmip.Surface;
 /// every act as the subject that certificate proves. Where the key is kept
 /// by the platform's keeper (<see cref="SecureSurface.Keeper"/>), the keeper
 /// signs each handshake through the runtime and the key never leaves it.
+/// What is missing or no identity the runtime says in <see cref="ListenerOperator.Source"/>.
 /// </summary>
 /// <param name="address">The node's operate address, <c>host:port</c>.</param>
 /// <param name="tls">What this side presents and trusts.</param>
 public sealed class RemoteOperator(string address, SecureSurface tls)
-    : ListenerOperator("REMOTE", address, Opened(address, tls, out string reason), reason)
+    : ListenerOperator("REMOTE", address, Opened(address, tls))
 {
     /// <summary>What every surface says when <c>--remote</c> or
-    /// <c>-Remote</c> names no node; null when it names one, whose address
-    /// the runtime judges as it opens it.</summary>
+    /// <c>-Remote</c> names no node, in the runtime's words; null when it
+    /// names one, whose address the runtime judges as it opens it.</summary>
     public static string? Refusal(string? address)
     {
-        return string.IsNullOrWhiteSpace(address)
-            ? "A remote needs a node's operate address, like node1:7401."
-            : null;
+        string said = RuntimeLibrary.Rules.Surfaces.RemoteRefusal(address);
+        return said.Length > 0 ? said : null;
     }
 
-    private static Operate.RemoteNode? Opened(
-        string address, SecureSurface tls, out string reason)
+    private static SurfaceNode Opened(string address, SecureSurface tls)
     {
         ArgumentNullException.ThrowIfNull(address);
         ArgumentNullException.ThrowIfNull(tls);
 
+        (string? certificate, string? key, string? anchors) = tls.Paths;
+
         // A key its platform's keeper holds: the keeper signs every
         // handshake, and the key never leaves it (ADR-0034, amendment
         // 2026-10-15).
-        if (tls.Keeper is { } keeper)
-        {
-            if (tls.KeptPem(out string chain, out string trusted) is { } absent)
-            {
-                reason = absent;
-                return null;
-            }
-
-            return RuntimeLibrary.Rules.Remotes.OpenKept(
-                address, chain, trusted,
-                message => keeper.Sign(OperatorCertificate.KeptAlias, message), out reason);
-        }
-
-        if (tls.Pem(out string certificate, out string key, out string anchors) is { } missing)
-        {
-            reason = missing;
-            return null;
-        }
-
-        return RuntimeLibrary.Rules.Remotes.Open(
-            address, certificate, key, anchors, out reason);
+        return tls.Keeper is { } keeper && certificate is not null
+            ? RuntimeLibrary.Rules.Surfaces.RemoteKept(
+                address, certificate, anchors, keeper.Name,
+                message => keeper.Sign(OperatorCertificate.KeptAlias, message))
+            : RuntimeLibrary.Rules.Surfaces.Remote(address, certificate, key, anchors);
     }
 }

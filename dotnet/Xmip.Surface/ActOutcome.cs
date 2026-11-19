@@ -8,7 +8,9 @@ namespace Xmip.Surface;
 /// Storage and not taken yet within the door's bound, its node taking it as
 /// soon as it runs; or refused, by role, by the door or by the node. Every
 /// act's record carries it, so the command line, the PowerShell module and
-/// the GUIs say the same word.
+/// the GUIs say the same word. Its values are the header's
+/// <c>XMIP_ACTED_*</c>, and what a status comes to, its word and its
+/// sentence are the runtime's (<c>operate::surface::acted</c>, section 28.3).
 /// </summary>
 public enum ActOutcome
 {
@@ -33,31 +35,24 @@ public static class ActOutcomes
     /// </summary>
     public static ActOutcome Of(XmipStatus status)
     {
-        return status == XmipStatus.Ok
-            ? ActOutcome.Taken
-            : status == XmipStatus.Again ? ActOutcome.Asked : ActOutcome.Refused;
+        return (ActOutcome)RuntimeLibrary.Rules.Sentences.ActOutcome((int)status).Outcome;
     }
 
     /// <summary>The word a surface says it by: <c>taken</c>, <c>asked</c>,
-    /// <c>refused</c>.</summary>
+    /// <c>refused</c> — <c>ActOutcome::word</c>, the runtime's.</summary>
     public static string Word(this ActOutcome outcome)
     {
-        return outcome.ToString().ToLowerInvariant();
+        return RuntimeLibrary.Rules.Sentences.OutcomeWord((int)outcome);
     }
 
     /// <summary>
     /// What a command says of an act that came to <paramref name="outcome"/>,
     /// saying <paramref name="result"/>, its outcome first in words:
-    /// <c>OK.</c>, <c>ASKED.</c> or <c>REFUSED:</c>.
+    /// <c>OK.</c>, <c>ASKED.</c> or <c>REFUSED:</c> — <c>ActOutcome::said</c>,
+    /// the runtime's.
     /// </summary>
     public static string Said(ActOutcome outcome, string result)
     {
-        return outcome switch
-        {
-            ActOutcome.Taken => $"OK. {result}",
-            ActOutcome.Asked => $"ASKED. {result}",
-            ActOutcome.Refused => $"REFUSED: {result}",
-            _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null),
-        };
+        return RuntimeLibrary.Rules.Sentences.ActSaid((int)outcome, result);
     }
 }

@@ -57,6 +57,20 @@ impl tls::Sign for Keeper {
     }
 }
 
+/// The signer a surfaces `sign` callback is, called with `context`:
+/// every signature a handshake needs asked of its keeper. Section 28.2s
+/// kept surface signs through it too.
+///
+/// # Safety
+/// `sign` may be called with `context` from any thread, at once from
+/// several, for as long as the signer lives.
+pub(crate) unsafe fn kept(sign: SignFn, context: *mut core::ffi::c_void) -> Arc<dyn tls::Sign> {
+    Arc::new(Keeper {
+        sign,
+        context: context as usize,
+    })
+}
+
 /// `runtime::plane::Remote::open` over the node at `address`, presenting
 /// `certificate`, a PEM chain, whose key the surface's keeper holds: `sign`
 /// is called with `context` for every signature, and the node is taken
@@ -119,10 +133,9 @@ unsafe fn remote_open_kept(
     let (Some(address), Some(certificate), Some(anchors)) = texts else {
         return status::MALFORMED;
     };
-    let keeper = Arc::new(Keeper {
-        sign,
-        context: context as usize,
-    });
+    // SAFETY: per the contract above, `sign` may be called with `context`
+    // until the handle is freed, which outlives the signer.
+    let keeper = unsafe { kept(sign, context) };
     let opened = tls::Identity::from_signer(certificate.as_bytes(), keeper, anchors.as_bytes())
         .map_err(|failed| failed.message)
         .and_then(|identity| Remote::open(address, &identity, hosted_clock()));

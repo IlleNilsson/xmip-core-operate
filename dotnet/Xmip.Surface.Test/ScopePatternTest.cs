@@ -15,14 +15,12 @@ public sealed class ScopePatternTest
     // one's scope: the patterns below are built from these names.
     private static readonly string Name = Cluster.Name;
     private static readonly string Receiver = Cluster.WithRole("receiving");
-    private static readonly string Processor = Cluster.WithRole("processing");
     private static readonly string Nodes = $"{Cluster.Scope}/node";
     private static readonly string Node = $"{Nodes}/{Receiver}";
 
     [Fact]
     public void APatternWithNoWildcardIsTheScopeItself()
     {
-        Assert.False(ScopePattern.HasWildcard(Node));
         Assert.True(ScopePattern.Matches(Node, Node));
 
         // Not a substring, either way about: exactness is the whole point of a
@@ -56,7 +54,6 @@ public sealed class ScopePatternTest
         string start = $"{Nodes}/{Receiver[..1]}*";
         string oneMore = $"{Nodes}/{Receiver[..^1]}?";
 
-        Assert.True(ScopePattern.HasWildcard(start));
         Assert.True(ScopePattern.Matches(Node, start));
         Assert.True(ScopePattern.Matches(Node, oneMore));
         Assert.False(ScopePattern.Matches($"{Node}s", oneMore));
@@ -133,38 +130,5 @@ public sealed class ScopePatternTest
             scopes, scope => ScopePattern.Matches(scope, $"{Node}-absent*"));
         Assert.DoesNotContain(
             scopes, scope => ScopePattern.Matches(scope, $"{Cluster.Scope}-absent*"));
-    }
-
-    [Fact]
-    public void TheTopmostDropWhatIsAlreadyBeneathAnother()
-    {
-        string other = $"{Nodes}/{Processor}";
-        string[] matched = [$"{Node}/receive", Node, $"{Node}/receive/tcp", other];
-
-        Assert.Equal(
-            new[] { Node, other }.Order(StringComparer.Ordinal),
-            ScopePattern.Topmost(matched));
-    }
-
-    /// <summary>
-    /// Ordinal order puts <c>&lt;node&gt;-spare</c> between <c>&lt;node&gt;</c>
-    /// and <c>&lt;node&gt;/receive</c>, so the topmost cannot be decided against
-    /// the last one kept alone. This is the case that would have gone unnoticed.
-    /// </summary>
-    [Fact]
-    public void TheTopmostAreDecidedAgainstEveryOneKept()
-    {
-        string node = $"{Cluster.Scope}/{Receiver}";
-        string[] matched = [node, $"{node}-spare", $"{node}/receive"];
-
-        Assert.Equal([node, $"{node}-spare"], ScopePattern.Topmost(matched));
-    }
-
-    [Fact]
-    public void TheRootSwallowsEverythingBeneathIt()
-    {
-        Assert.Equal(
-            [ScopeTree.Root],
-            ScopePattern.Topmost([ScopeTree.Root, Cluster.Scope, Node]));
     }
 }

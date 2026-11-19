@@ -56,18 +56,13 @@ public static class OperatorCertificate
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        return !File.Exists(request)
-            ? new OperatorSigned(request, chain, string.Empty, $"No file at {request}.")
-            : chain is not null && File.Exists(chain)
-            ? new OperatorSigned(
-                request, chain, string.Empty,
-                $"REFUSED: {chain} is there already; nothing is overwritten.")
-            : !certificates.Sign(
-                configuration, File.ReadAllText(request), out string signed, out string no)
-            || (chain is not null
-                && !certificates.Keep(Path.GetFullPath(chain), signed, false, out no))
-            ? new OperatorSigned(request, chain, string.Empty, $"REFUSED: {no}")
-            : new OperatorSigned(request, chain, signed, string.Empty);
+        // The checks, the signing and the keeping are the runtime's
+        // (xmip_operator_sign_file_v1), the ones xmip certificate --sign makes.
+        return certificates.SignFile(
+                request, configuration, chain is null ? null : Path.GetFullPath(chain),
+                out string signed, out string no)
+            ? new OperatorSigned(request, chain, signed, string.Empty)
+            : new OperatorSigned(request, chain, string.Empty, no);
     }
 
     /// <summary>

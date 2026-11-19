@@ -152,6 +152,26 @@ public sealed partial class PublicationReader
     }
 
     /// <summary>
+    /// The publication a handle another section handed over holds — a
+    /// surface's reading (section 28.2) — copied out whole, and the handle
+    /// freed: nothing is read a second time.
+    /// </summary>
+    public Publication Adopt(nint handle)
+    {
+        try
+        {
+            return Copied(handle);
+        }
+        finally
+        {
+            unsafe
+            {
+                _free(handle);
+            }
+        }
+    }
+
+    /// <summary>
     /// The points of the curve <paramref name="text"/> is — a node's
     /// throughput over time (ADR-0029), each a measurement at the curve's node
     /// whose window is the instant it was observed — as the runtime reads it;

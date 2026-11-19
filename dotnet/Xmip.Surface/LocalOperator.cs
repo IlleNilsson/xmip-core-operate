@@ -21,33 +21,19 @@ namespace Xmip.Surface;
 /// rule). The runtime's follow recovers it on its own.</param>
 public sealed class LocalOperator(string? endpoint, TimeSpan within = default)
     : ListenerOperator(
-        "LOCAL", endpoint ?? string.Empty, Opened(endpoint, within, out string reason), reason)
+        "LOCAL", endpoint ?? string.Empty,
+        RuntimeLibrary.Rules.Surfaces.Local(endpoint ?? string.Empty, within))
 {
     /// <summary>What every surface says when nothing names a node to operate
-    /// on this machine.</summary>
-    public const string Unnamed =
-        "no node is named: give -Local or --local the node's local endpoint, " +
-        "xmip-<node> unless its [operate] local names another, or name a surface " +
-        "in the document";
+    /// on this machine, in the runtime's words.</summary>
+    public static string Unnamed => RuntimeLibrary.Rules.Surfaces.Unnamed;
 
     /// <summary>What every surface says when <c>--local</c> or
-    /// <c>-Local</c> names no endpoint; null when it names one.</summary>
+    /// <c>-Local</c> names no endpoint, in the runtime's words; null when it
+    /// names one.</summary>
     public static string? Refusal(string? endpoint)
     {
-        return string.IsNullOrWhiteSpace(endpoint)
-            ? "A local node needs its local endpoint, like xmip-node1."
-            : null;
-    }
-
-    private static Operate.RemoteNode? Opened(
-        string? endpoint, TimeSpan within, out string reason)
-    {
-        if (string.IsNullOrWhiteSpace(endpoint))
-        {
-            reason = Unnamed;
-            return null;
-        }
-
-        return RuntimeLibrary.Rules.Remotes.OpenLocal(endpoint, out reason, within);
+        string said = RuntimeLibrary.Rules.Surfaces.LocalRefusal(endpoint);
+        return said.Length > 0 ? said : null;
     }
 }

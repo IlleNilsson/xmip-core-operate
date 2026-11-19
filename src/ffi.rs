@@ -59,6 +59,8 @@ pub mod report;
 pub mod resident;
 #[cfg(feature = "remote")]
 pub mod rule;
+#[cfg(feature = "remote")]
+pub mod scope_index;
 #[cfg(feature = "node")]
 pub mod secure_listener;
 #[cfg(feature = "remote")]
@@ -69,6 +71,8 @@ pub mod served;
 pub mod start;
 #[cfg(feature = "remote")]
 pub mod subscription;
+#[cfg(feature = "remote")]
+pub mod surface;
 /// The operator's table, `xmip_operate_v1`.
 #[cfg(feature = "node")]
 pub mod table;
@@ -76,3 +80,7 @@ pub mod table;
 mod text;
 #[cfg(feature = "remote")]
 pub mod topology;
+#[cfg(feature = "remote")]
+pub mod words;
+#[cfg(feature = "node")]
+pub mod written;

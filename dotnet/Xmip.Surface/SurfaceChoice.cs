@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Configuration;
 
 namespace Xmip.Surface;
@@ -84,53 +87,92 @@ public static partial class SurfaceChoice
     {
         ArgumentNullException.ThrowIfNull(configuration);
 
-        return Opened(configuration.GetSection(Table), configuration, basePath, keeper);
+        return Opened(new JsonObject { ["asked"] = "host" }, configuration, basePath, keeper);
     }
 
-    // The one surface a table names — [Xmip] itself, or one cluster of its
-    // Clusters — refused in the table's own keys. What a remote presents and
-    // trusts is the host's, read from the document: one host, one identity.
+    // The one surface `asked` names over the document — the line's, [Xmip]
+    // itself, or one cluster of its Clusters — decided by the runtime
+    // (operate::surface::choice, section 28.2) and refused in the table's own
+    // keys; opened here, where a keeper is .NET's to hold. What a remote
+    // presents and trusts is the host's, read from the document: one host,
+    // one identity.
     private static IOperatorSurface Opened(
-        IConfigurationSection table, IConfiguration document, string basePath,
-        IOperatorKeeper? keeper)
+        JsonObject asked, IConfiguration document, string basePath, IOperatorKeeper? keeper)
     {
-        string chosen = table[SurfaceLeaf]?.Trim() ?? string.Empty;
-        string surfaceKey = $"{table.Path}:{SurfaceLeaf}";
+        asked["kept"] = keeper is not null;
+        asked["base"] = basePath;
+        asked["environment"] = SecureSurface.HostEnvironment();
+
+        if (!RuntimeLibrary.Rules.Surfaces.Decided(
+            asked.ToJsonString(), TableOf(document), out string answer))
+        {
+            throw new InvalidOperationException(answer);
+        }
+
+        using JsonDocument decided = JsonDocument.Parse(answer);
+        JsonElement choice = decided.RootElement;
+        string? Text(string name) => choice.GetProperty(name).GetString();
 
         // A local surface naming no endpoint names no node, and says so on
         // every answer (LocalOperator.Unnamed), as a command naming none does.
-        if (string.Equals(chosen, Local, StringComparison.OrdinalIgnoreCase))
+        return Text("surface") switch
         {
-            return new LocalOperator(table[LocalLeaf]);
+            Snapshot => new SnapshotOperator(Text("path") ?? string.Empty),
+            Local => new LocalOperator(Text("endpoint")),
+            _ => new RemoteOperator(
+                Text("address") ?? string.Empty,
+                choice.GetProperty("kept").GetBoolean() && keeper is not null
+                    ? SecureSurface.Kept(Text("certificate")!, Text("anchors"), keeper)
+                    : SecureSurface.Checked(Text("certificate"), Text("key"), Text("anchors"))),
+        };
+    }
+
+    // The host's [Xmip] table as the runtime takes one, JSON: IConfiguration
+    // is .NET's, and reads a document, a line and the environment alike; the
+    // runtime decides over what it read. A section whose keys are 0, 1, …
+    // is an array, as IConfiguration lays out TOML's.
+    internal static string TableOf(IConfiguration document)
+    {
+        return (Node(document.GetSection(Table)) ?? new JsonObject()).ToJsonString();
+    }
+
+    private static JsonNode? Node(IConfigurationSection section)
+    {
+        IConfigurationSection[] children = [.. section.GetChildren()];
+
+        if (children.Length == 0)
+        {
+            return section.Value is { } value ? JsonValue.Create(value) : null;
         }
 
-        if (string.Equals(chosen, Snapshot, StringComparison.OrdinalIgnoreCase))
+        if (children.All(child => int.TryParse(
+            child.Key, NumberStyles.None, CultureInfo.InvariantCulture, out _)))
         {
-            string? path = table[SnapshotLeaf];
+            JsonArray listed = [];
 
-            return string.IsNullOrWhiteSpace(path)
-                ? throw new InvalidOperationException(
-                    $"{surfaceKey} is \"{Snapshot}\" and {table.Path}:{SnapshotLeaf} " +
-                    "names no file")
-                : new SnapshotOperator(TomlDocument.Resolve(path, basePath));
+            foreach (IConfigurationSection child in children.OrderBy(
+                child => int.Parse(child.Key, CultureInfo.InvariantCulture)))
+            {
+                if (Node(child) is { } item)
+                {
+                    listed.Add(item);
+                }
+            }
+
+            return listed;
         }
 
-        if (string.Equals(chosen, Remote, StringComparison.OrdinalIgnoreCase))
-        {
-            string? address = table[AddressLeaf];
+        JsonObject table = [];
 
-            return RemoteOperator.Refusal(address) is null
-                ? new RemoteOperator(address!, SecureSurface.From(document, basePath, keeper))
-                : throw new InvalidOperationException(
-                    $"{surfaceKey} is \"{Remote}\" and {table.Path}:{AddressLeaf} names no node");
+        foreach (IConfigurationSection child in children)
+        {
+            if (Node(child) is { } item)
+            {
+                table[child.Key] = item;
+            }
         }
 
-        string words = $"\"{Local}\", \"{Snapshot}\" or \"{Remote}\"";
-
-        throw new InvalidOperationException(
-            chosen.Length == 0
-                ? $"{surfaceKey} is not set; it is {words}"
-                : $"{surfaceKey} is \"{chosen}\"; it is {words}");
+        return table;
     }
 
     /// <summary>
@@ -161,8 +203,8 @@ public static partial class SurfaceChoice
 
         return clusters.Length == 0
             ? ClusterSurfaces.Over(Open(configuration, basePath, keeper))
-            : Held(clusters.Select<IConfigurationSection, Func<IOperatorSurface>>(
-                table => () => Opened(table, configuration, basePath, keeper)));
+            : Held(Enumerable.Range(0, clusters.Length).Select<int, Func<IOperatorSurface>>(
+                at => () => Opened(Cluster(at), configuration, basePath, keeper)));
     }
 
     /// <summary>
@@ -252,6 +294,12 @@ public static partial class SurfaceChoice
 
         return clusters.Length == 0
             ? Open(configuration, basePath)
-            : Opened(clusters[0], configuration, basePath, keeper: null);
+            : Opened(Cluster(0), configuration, basePath, keeper: null);
+    }
+
+    // The cluster at `at` of Clusters, as the runtime is asked for it.
+    private static JsonObject Cluster(int at)
+    {
+        return new JsonObject { ["asked"] = "cluster", ["cluster"] = at };
     }
 }

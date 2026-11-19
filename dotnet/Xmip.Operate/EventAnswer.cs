@@ -48,8 +48,8 @@ internal static class EventAnswer
         XmipStatus said = (XmipStatus)status;
 
         throw said is XmipStatus.Invalid or XmipStatus.Malformed
-            ? new ArgumentException($"The runtime refused {what}: {said.Explain()}")
+            ? new ArgumentException($"The runtime refused {what}: {RuntimeWords.Explain(status)}")
             : new InvalidOperationException($"The runtime answered {what} with {said}: " +
-                said.Explain());
+                RuntimeWords.Explain(status));
     }
 }

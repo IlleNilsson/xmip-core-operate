@@ -54,20 +54,26 @@ public sealed record ScopeItem(
     /// (ADR-0056, amendment 2026-11-13).</summary>
     public string Purpose { get; init; } = string.Empty;
 
-    /// <summary>Build a row from health already read and figures already read.</summary>
-    public static ScopeItem From(
-        string scope, IReadOnlyList<HealthRecord> records, Figures figures)
+    /// <summary>
+    /// <paramref name="scope"/>'s row as <paramref name="index"/> holds it,
+    /// with its <paramref name="figures"/>: its worst record's severity and
+    /// evidence, and its mood the rollup where records lie beneath it, else
+    /// that record's own — <c>operate::surface::ScopeItem::of</c>'s rule,
+    /// answered by the runtime's tree (<c>xmip_scope_index_placed_v1</c>).
+    /// </summary>
+    public static ScopeItem From(ScopeIndex index, string scope, Figures figures)
     {
-        int depth = ScopeTree.Parts(scope).Length;
-        bool container = records.Any(record => ScopeTree.Parts(record.Scope).Length > depth);
-        HealthRecord? worst = ScopeTree.Worst(records);
-        HealthState? health = container ? ScopeTree.Rollup(records) : worst?.State;
+        ArgumentNullException.ThrowIfNull(index);
+        ArgumentNullException.ThrowIfNull(figures);
+
+        ScopePlacement? placed = index.Placed(scope);
+        HealthRecord? worst = index.Worst(scope);
 
         return new ScopeItem(
             scope == ScopeTree.Root ? "cluster" : ScopeTree.Name(scope),
             scope,
-            container,
-            health,
+            placed?.IsContainer ?? false,
+            placed?.RowMood,
             worst?.Severity,
             worst?.Evidence ?? string.Empty,
             worst?.Scope,
@@ -80,7 +86,7 @@ public sealed record ScopeItem(
     {
         ArgumentNullException.ThrowIfNull(surface);
 
-        return From(scope, surface.Health(scope), surface.Figures(scope)) with
+        return From(surface.Index(), scope, surface.Figures(scope)) with
         {
             FromTo = surface.FromTo(scope),
             Purpose = PurposeAt(surface, scope),
@@ -98,7 +104,7 @@ public sealed record ScopeItem(
         return
         [
             .. index.Branches(scope).Select(branch => From(
-                branch.Scope, index.Health(branch.Scope), surface.Figures(branch.Scope)) with
+                index, branch.Scope, surface.Figures(branch.Scope)) with
             {
                 FromTo = surface.FromTo(branch.Scope),
                 Purpose = PurposeAt(surface, branch.Scope),

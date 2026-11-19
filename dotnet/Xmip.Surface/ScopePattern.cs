@@ -41,16 +41,6 @@ namespace Xmip.Surface;
 /// </remarks>
 public static class ScopePattern
 {
-    private static readonly char[] Wildcards = ['*', '?'];
-
-    /// <summary>Whether a pattern asks for a group rather than naming one
-    /// scope. A pattern with no wildcard is an exact scope, and every surface
-    /// treats it as the scope the operator typed.</summary>
-    public static bool HasWildcard(string? pattern)
-    {
-        return pattern is not null && pattern.IndexOfAny(Wildcards) >= 0;
-    }
-
     /// <summary>
     /// Whether a scope is what a pattern names. A pattern with no wildcard
     /// matches that one scope exactly — never a substring of it and never what
@@ -67,34 +57,5 @@ public static class ScopePattern
     public static string Normal(string scope)
     {
         return ScopeTree.Join(ScopeTree.Parts(scope));
-    }
-
-    /// <summary>
-    /// The topmost of a set of scopes: one that lies beneath another in the
-    /// same set is dropped. Every command and every view reads a scope
-    /// <em>and everything beneath it</em>, so naming both a scope and its
-    /// child would say the child twice.
-    /// </summary>
-    public static IReadOnlyList<string> Topmost(IEnumerable<string> scopes)
-    {
-        List<string> ordered =
-        [
-            .. scopes.Select(Normal).Distinct(StringComparer.Ordinal)
-                .OrderBy(scope => scope, StringComparer.Ordinal),
-        ];
-        List<string> topmost = [];
-
-        foreach (string scope in ordered)
-        {
-            // Against every one kept, not only the last: ordinal order puts
-            // `a-x` between `a` and `a/b`, so the last kept is not always the
-            // ancestor to ask.
-            if (!topmost.Any(kept => ScopeTree.Beneath(scope, kept)))
-            {
-                topmost.Add(scope);
-            }
-        }
-
-        return topmost;
     }
 }

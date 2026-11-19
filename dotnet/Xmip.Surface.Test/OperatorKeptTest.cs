@@ -30,8 +30,7 @@ public sealed class OperatorKeptTest
         string anchors = Path.Combine(authority.Directory, "phone", "anchor.pem");
         SecureSurface tls = SecureSurface.Kept(chain, anchors, keeper);
 
-        Assert.Contains(
-            "No certificate is kept", tls.KeptPem(out _, out _), StringComparison.Ordinal);
+        Assert.Contains("No certificate is kept", Opened(tls), StringComparison.Ordinal);
 
         OperatorKept asked = OperatorCertificate.RequestKept(Certificates, keeper, Person);
         Assert.True(asked.Ok, asked.Refused);
@@ -43,8 +42,7 @@ public sealed class OperatorKeptTest
             Certificates.Sign(authority.Kept(), asked.Request, out string signed, out string no),
             no);
         Assert.Equal(string.Empty, OperatorCertificate.Keep(Certificates, keeper, signed, chain));
-        Assert.Contains(
-            "No anchors are kept", tls.KeptPem(out _, out _), StringComparison.Ordinal);
+        Assert.Contains("No anchors are kept", Opened(tls), StringComparison.Ordinal);
         Assert.Equal(
             string.Empty,
             OperatorCertificate.KeepAnchors(
@@ -90,6 +88,15 @@ public sealed class OperatorKeptTest
 
         OperatorKept named = OperatorCertificate.RequestKept(Certificates, other, "CN=alice");
         Assert.StartsWith("REFUSED: ", named.Refused, StringComparison.Ordinal);
+    }
+
+    // What a remote surface presenting `tls` says as it opens, before it asks
+    // any node: the runtime reads the kept files then, and says what is not
+    // kept yet. Nothing listens at the address.
+    private static string Opened(SecureSurface tls)
+    {
+        using RemoteOperator remote = new("127.0.0.1:9", tls);
+        return remote.Source;
     }
 
     // A keeper whose key is held in memory and never handed out.

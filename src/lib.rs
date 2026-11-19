@@ -13,12 +13,24 @@
 //! phone: the exports a surface reads with (`xmip_operate.h` sections 7, 8,
 //! 9, 18 and section 17's client).
 
+#[cfg(feature = "remote")]
+pub mod audit_read;
+#[cfg(feature = "node")]
+pub mod authority;
+#[cfg(feature = "node")]
+pub mod certificate;
+#[cfg(feature = "node")]
+pub mod database;
 #[cfg(feature = "node")]
 pub mod design;
 #[cfg(feature = "remote")]
 pub mod document;
 pub mod ffi;
 #[cfg(feature = "node")]
+pub mod module_probe;
+#[cfg(feature = "node")]
 pub mod operator;
+#[cfg(feature = "remote")]
+pub mod surface;
 #[cfg(feature = "remote")]
 mod wire;

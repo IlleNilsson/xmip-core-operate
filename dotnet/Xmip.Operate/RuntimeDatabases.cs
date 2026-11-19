@@ -21,16 +21,61 @@ public sealed class RuntimeDatabases
 {
     private readonly delegate* unmanaged[Cdecl]<XmipStr, uint, uint, byte*, nuint, nuint*, int>
         _upgrade;
+    private readonly delegate* unmanaged[Cdecl]<XmipStr, XmipStr, byte*, nuint, nuint*, int>
+        _write;
 
     internal RuntimeDatabases(nint library)
     {
         _upgrade = (delegate* unmanaged[Cdecl]<XmipStr, uint, uint, byte*, nuint, nuint*, int>)
             NativeLibrary.GetExport(library, OperateAbi.DatabaseUpgradeEntrypoint);
+        _write = RuntimeDesign.Export(library, OperateAbi.DatabaseWriteEntrypoint);
     }
 
-    /// <summary>Section 20's symbol, which a node's runtime exports.</summary>
+    /// <summary>Section 20's symbols, which a node's runtime exports.</summary>
     public static IReadOnlyList<string> Entrypoints { get; } =
-        [OperateAbi.DatabaseUpgradeEntrypoint];
+        [OperateAbi.DatabaseUpgradeEntrypoint, OperateAbi.DatabaseWriteEntrypoint];
+
+    /// <summary>
+    /// The scripts of <paramref name="upgrade"/> written into
+    /// <paramref name="folder"/>, made where it is not, none over a file —
+    /// the paths written; or null with the runtime's sentence in
+    /// <paramref name="refused"/> (<c>xmip_database_write_v1</c>, the rule
+    /// <c>xmip database --out</c> writes by).
+    /// </summary>
+    public IReadOnlyList<string>? Write(
+        DatabaseUpgrade upgrade, string folder, out string refused)
+    {
+        ArgumentNullException.ThrowIfNull(upgrade);
+        ArgumentNullException.ThrowIfNull(folder);
+
+        string scripts = new System.Text.Json.Nodes.JsonObject
+        {
+            ["version"] = upgrade.Version,
+            ["scripts"] = new System.Text.Json.Nodes.JsonArray(
+            [
+                .. upgrade.Scripts.Select(script => (System.Text.Json.Nodes.JsonNode?)
+                    new System.Text.Json.Nodes.JsonObject
+                    {
+                        ["name"] = script.Name,
+                        ["text"] = script.Text,
+                    }),
+            ]),
+        }.ToJsonString();
+
+        if (!RuntimeDesign.Call(_write, scripts, folder, out string answer))
+        {
+            refused = answer;
+            return null;
+        }
+
+        refused = string.Empty;
+        using JsonDocument written = JsonDocument.Parse(answer);
+        return
+        [
+            .. written.RootElement.EnumerateArray()
+                .Select(path => path.GetString() ?? string.Empty),
+        ];
+    }
 
     /// <summary>
     /// The scripts that bring each database on <paramref name="server"/> —

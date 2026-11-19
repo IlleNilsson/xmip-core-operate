@@ -57,12 +57,11 @@ public static class ScopeTree
         return RuntimeLibrary.Rules.Contains(scope, candidate);
     }
 
-    /// <summary>The scope one level up; the root's parent is the root.</summary>
+    /// <summary>The scope one level up; the root's parent is the root —
+    /// <c>operate::surface::scope_tree::parent</c>, called in the runtime.</summary>
     public static string Parent(string scope)
     {
-        string[] parts = Parts(scope);
-
-        return parts.Length <= 1 ? Root : Join(parts.Take(parts.Length - 1));
+        return RuntimeLibrary.Rules.ScopeIndexes.Relative(scope, OperateAbi.ScopeRelativeParent);
     }
 
     /// <summary>The node a thing runs on: the segment after the node marker
@@ -80,24 +79,12 @@ public static class ScopeTree
     /// <c>xmip:///&lt;cluster&gt;/node/&lt;node&gt;</c> for
     /// <c>xmip:///&lt;cluster&gt;/node/&lt;node&gt;/send/&lt;Port&gt;</c> — by
     /// <see cref="Node"/> and <see cref="Parent"/>; empty for a scope on no
-    /// node.</summary>
+    /// node — <c>operate::surface::scope_tree::node_scope</c>, called in the
+    /// runtime.</summary>
     public static string NodeScope(string scope)
     {
-        string node = Node(scope);
-
-        if (node.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        string at = scope;
-
-        for (string up = Parent(at); up != at && Node(up) == node; up = Parent(at))
-        {
-            at = up;
-        }
-
-        return at;
+        return RuntimeLibrary.Rules.ScopeIndexes.Relative(
+            scope, OperateAbi.ScopeRelativeNodeScope);
     }
 
     /// <summary>The three stages of the message path, in the order an operator
@@ -161,12 +148,11 @@ public static class ScopeTree
     /// the root. Until 2026-09-26 the first two segments were dropped, which
     /// read a scope as node, stage, name: an Essentials scope lost its test
     /// (<c>filing/aws-s3/xml</c> said <c>aws-s3/xml</c>) and a node's leaf its node
-    /// marker, so no view named the exact scope.</summary>
+    /// marker, so no view named the exact scope.
+    /// <c>operate::surface::scope_tree::name</c>, called in the runtime.</summary>
     public static string Name(string scope)
     {
-        string[] parts = Parts(scope);
-
-        return parts.Length >= 2 ? string.Join('/', parts.Skip(1)) : scope;
+        return RuntimeLibrary.Rules.ScopeIndexes.Relative(scope, OperateAbi.ScopeRelativeName);
     }
 
     /// <summary>The rollup (ADR-0041): a parent above anything not Fine is

@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Xmip.Operate;
 
 namespace Xmip.Surface;
@@ -41,26 +43,30 @@ public sealed record NodeCapability(
     /// <summary>The roles as <c>--role</c> and <c>[run]</c> write them:
     /// <c>receiving+processing</c>, or the empty string when none is
     /// declared.</summary>
-    public string Words => string.Join('+', Roles);
+    public string Words => Text("words");
 
     /// <summary>The stages of the message path the node's roles serve, in path
-    /// order: <c>node::NodeRole::stages</c> for each role, called in the
-    /// runtime.</summary>
-    public IReadOnlyList<string> Stages =>
-    [
-        .. ScopeTree.Stages.Where(stage => Roles.Any(
-            role => RuntimeLibrary.Rules.RoleStages(role).Contains(stage, StringComparer.Ordinal))),
-    ];
+    /// order: <c>node::NodeRole::stages</c> for each role.</summary>
+    public IReadOnlyList<string> Stages
+    {
+        get
+        {
+            JsonElement said = Asked();
+            return
+            [
+                .. said.GetProperty("stages").EnumerateArray()
+                    .Select(stage => stage.GetString() ?? string.Empty),
+            ];
+        }
+    }
 
     /// <summary>The online capability in the word a health record carries.</summary>
-    public string Route => Online ? "online" : "offline";
+    public string Route => Text("route");
 
     /// <summary>Where the declaration came from, which is never the same
     /// question as what it says: a node publishes its capability, and
     /// <c>[run]</c> only says what the node was started with.</summary>
-    public string Origin => Published
-        ? "published by the node"
-        : "what the run started it with";
+    public string Origin => Text("origin");
 
     /// <summary>What every surface says of one node, in one phrase:
     /// <c>receiving+processing · online</c>. A node declaring no role says so
@@ -68,16 +74,11 @@ public sealed record NodeCapability(
     /// refused declaration says its refusal instead.</summary>
     public string Line()
     {
-        return !Said
-            ? string.Empty
-            : Refusal.Length > 0
-                ? Refusal
-                : $"{(Roles.Count > 0 ? Words : "no role")} · {Route}";
+        return Text("line");
     }
 
     /// <summary>What the node is for, by the roles it declares — each with its
-    /// meaning, a line each, or <c>declares no role</c>
-    /// (<see cref="English.Purpose(IEnumerable{string})"/>) — what every surface
+    /// meaning, a line each, or <c>declares no role</c> — what every surface
     /// shows of a node: on hover on the Topology and the Monitor, beneath its
     /// row in <c>xmip</c> and PowerShell (ADR-0056, amendment 2026-11-13). A
     /// refused declaration says its refusal instead, and a node behind which
@@ -85,11 +86,7 @@ public sealed record NodeCapability(
     /// not a node declaring no role.</summary>
     public string Purpose()
     {
-        return !Said
-            ? string.Empty
-            : Refusal.Length > 0
-                ? Refusal
-                : English.Purpose(Roles);
+        return Text("purpose");
     }
 
     /// <summary>What a node published of itself, when the record at
@@ -152,4 +149,44 @@ public sealed record NodeCapability(
     /// <summary>The words a node may declare, its roles:
     /// <c>node::NodeRole::WORDS</c>, called in the runtime.</summary>
     public static IReadOnlyList<string> RoleWords => RuntimeLibrary.Rules.RoleWords;
+
+    // The runtime's answer, asked once per record: a record does not change,
+    // and a view asks it each time it is drawn.
+    private static readonly ConditionalWeakTable<NodeCapability, StrongBox<JsonElement>>
+        Answers = [];
+
+    // The declaration as the runtime says it (xmip_capability_said_v1,
+    // operate::surface::node_capability).
+    private JsonElement Asked()
+    {
+        return Answers.GetValue(this, static held => held.Ask()).Value;
+    }
+
+    private StrongBox<JsonElement> Ask()
+    {
+        string declared = JsonText.Document(writer =>
+        {
+            writer.WriteString("node", Node);
+            writer.WriteStartArray("roles");
+            foreach (string role in Roles)
+            {
+                writer.WriteStringValue(role);
+            }
+
+            writer.WriteEndArray();
+            writer.WriteBoolean("online", Online);
+            writer.WriteBoolean("published", Published);
+            writer.WriteString("refusal", Refusal);
+        });
+
+        using JsonDocument said =
+            JsonDocument.Parse(RuntimeLibrary.Rules.Sentences.CapabilitySaid(declared));
+        return new StrongBox<JsonElement>(said.RootElement.Clone());
+    }
+
+    private string Text(string name)
+    {
+        JsonElement said = Asked();
+        return said.GetProperty(name).GetString() ?? string.Empty;
+    }
 }
