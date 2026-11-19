@@ -18,13 +18,7 @@ public sealed class FailedMessageSurfaceTest : IDisposable
     private static readonly string Receiving =
         $"{Cluster.Scope}/node/{Cluster.WithRole("receiving")}";
 
-    private readonly string scratch =
-        Path.Combine(Path.GetTempPath(), $"xmip-failed-{Guid.NewGuid():N}");
-
-    public FailedMessageSurfaceTest()
-    {
-        Directory.CreateDirectory(scratch);
-    }
+    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-failed-").FullName;
 
     public void Dispose()
     {

@@ -27,13 +27,7 @@ public sealed class DeadMessageSurfaceTest : IDisposable
     private static readonly string Processor = Cluster.WithRole("processing");
     private static readonly string Receiving = $"{Cluster.Scope}/node/{Receiver}";
 
-    private readonly string scratch =
-        Path.Combine(Path.GetTempPath(), $"xmip-dead-{Guid.NewGuid():N}");
-
-    public DeadMessageSurfaceTest()
-    {
-        Directory.CreateDirectory(scratch);
-    }
+    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-dead-").FullName;
 
     private string Audit => Path.Combine(scratch, "audit");
 

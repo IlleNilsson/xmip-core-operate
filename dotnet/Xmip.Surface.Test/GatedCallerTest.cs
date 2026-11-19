@@ -13,13 +13,7 @@ namespace Xmip.Surface.Test;
 /// </summary>
 public sealed class GatedCallerTest : IDisposable
 {
-    private readonly string scratch =
-        Path.Combine(Path.GetTempPath(), $"xmip-gated-{Guid.NewGuid():n}");
-
-    public GatedCallerTest()
-    {
-        Directory.CreateDirectory(scratch);
-    }
+    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-gated-").FullName;
 
     public void Dispose()
     {

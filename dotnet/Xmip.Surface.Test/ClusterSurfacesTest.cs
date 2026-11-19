@@ -102,8 +102,7 @@ public sealed class ClusterSurfacesTest
         // A roll ends while an operator is reading it. The name stays in the
         // chooser — a cluster that vanished under the hand would be worse —
         // and the surface behind it answers nothing, said so.
-        string area = Path.Combine(Path.GetTempPath(), $"xmip-clusters-{Guid.NewGuid():n}");
-        Directory.CreateDirectory(area);
+        string area = Directory.CreateTempSubdirectory("xmip-clusters-").FullName;
         string ending = Path.Combine(area, $"{Second}-snapshot.xmip");
         File.Copy(Fixture("cluster-cl2.xmip"), ending);
 
@@ -332,8 +331,7 @@ public sealed class ClusterSurfacesTest
     {
         public Papers(string toml)
         {
-            Directory = Path.Combine(Path.GetTempPath(), $"xmip-cluster-set-{Guid.NewGuid():n}");
-            System.IO.Directory.CreateDirectory(Directory);
+            Directory = System.IO.Directory.CreateTempSubdirectory("xmip-cluster-set-").FullName;
             string file = Path.Combine(Directory, "gui.toml");
             File.WriteAllText(file, toml);
             Configuration = TomlDocument.Read(file);

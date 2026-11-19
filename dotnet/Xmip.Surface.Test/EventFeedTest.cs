@@ -31,7 +31,7 @@ public sealed class EventFeedTest
 
     private static string Scratch()
     {
-        return Path.Combine(Path.GetTempPath(), $"xmip-surface-event-{Guid.NewGuid():n}");
+        return Directory.CreateTempSubdirectory("xmip-surface-event-").FullName;
     }
 
     [Fact]

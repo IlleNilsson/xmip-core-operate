@@ -7,9 +7,11 @@
 //! `Certificate` and `PrivateKey` name and trusts the anchors `TrustAnchor`
 //! names, each else its `XMIP_` variable (ADR-0063; [`named`]). What is
 //! chosen is decided once here ([`decided`]); a surface in Rust opens it
-//! ([`open`]), one in another language opens what the decision names.
+//! ([`open`]), one in another language opens what the decision names. The
+//! table's words, and the document an install writes in them, are [`table`].
 
 pub mod named;
+pub mod table;
 
 use std::path::{Component, Path, PathBuf};
 use std::sync::Arc;
@@ -20,9 +22,7 @@ use crate::surface::OperatorSurface;
 use crate::surface::listener::{ListenerSurface, remote_refusal};
 use crate::surface::snapshot::SnapshotSurface;
 use named::Named;
-
-/// The host's table.
-const TABLE: &str = "Xmip";
+use table::{ENDPOINT, LOCAL, SURFACE, TABLE};
 
 /// What an operator stated for one invocation about the surface to read.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -201,7 +201,7 @@ fn stated_choice(line: &SurfaceLine, document: &Document, keeps: bool) -> Result
     }
 
     let surface = document
-        .value("Surface")
+        .value(SURFACE)
         .filter(|chosen| !chosen.trim().is_empty());
 
     match (document.clusters().first(), surface) {
@@ -223,13 +223,13 @@ fn table_choice(
             .and_then(toml::Value::as_str)
             .map(str::to_string)
     };
-    let chosen = text("Surface")
+    let chosen = text(SURFACE)
         .map(|chosen| chosen.trim().to_string())
         .unwrap_or_default();
-    let key = format!("{at}:Surface");
+    let key = format!("{at}:{SURFACE}");
 
-    if chosen.eq_ignore_ascii_case("local") {
-        return Ok(Choice::Local(text("Local")));
+    if chosen.eq_ignore_ascii_case(LOCAL) {
+        return Ok(Choice::Local(text(ENDPOINT)));
     }
     if chosen.eq_ignore_ascii_case("snapshot") {
         return match text("Snapshot").filter(|path| !path.trim().is_empty()) {

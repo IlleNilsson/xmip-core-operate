@@ -40,7 +40,7 @@ public sealed class BrowserCallerTest : IDisposable
     private readonly List<IDisposable> opened = [];
 
     private readonly string scratch =
-        Path.Combine(Path.GetTempPath(), $"xmip-browser-{Guid.NewGuid():n}");
+        Directory.CreateTempSubdirectory("xmip-browser-").FullName;
 
     // What the machine's environment states, set aside so the run's own
     // statement is the only one these tests read.
@@ -49,7 +49,6 @@ public sealed class BrowserCallerTest : IDisposable
 
     public BrowserCallerTest()
     {
-        Directory.CreateDirectory(scratch);
         Environment.SetEnvironmentVariable(RoleAssignment.EnvironmentVariable, null);
     }
 

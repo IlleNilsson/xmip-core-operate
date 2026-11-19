@@ -319,8 +319,7 @@ public sealed class SurfaceChoiceTest
     {
         public Document(string toml)
         {
-            Directory = Path.Combine(Path.GetTempPath(), $"xmip-surface-choice-{Guid.NewGuid():n}");
-            System.IO.Directory.CreateDirectory(Directory);
+            Directory = System.IO.Directory.CreateTempSubdirectory("xmip-surface-choice-").FullName;
             string file = Path.Combine(Directory, "gui.toml");
             File.WriteAllText(file, toml);
             Configuration = TomlDocument.Read(file);

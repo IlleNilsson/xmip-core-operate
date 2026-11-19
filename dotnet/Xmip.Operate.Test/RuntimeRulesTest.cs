@@ -284,8 +284,7 @@ public sealed class RuntimeRulesTest
     [Fact]
     public void AnAuditRecordCrossesToTheCapabilityAndLandsInTheDirectoryItWasTold()
     {
-        string directory = Path.Combine(
-            Path.GetTempPath(), $"xmip-operate-audit-{Guid.NewGuid():n}");
+        string directory = Directory.CreateTempSubdirectory("xmip-operate-audit-").FullName;
 
         AuditOutcome outcome = Rules.Audit.Record(
             "Xmip.Operate.Test",
