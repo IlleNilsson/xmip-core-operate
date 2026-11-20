@@ -70,22 +70,30 @@ internal sealed class TestAuthority : IDisposable
 
     /// <summary>
     /// This authority kept as the cluster's is (<c>xmip-core-provision</c>'s
-    /// <c>authority.pem</c> and <c>authority.key</c>) and a node's
-    /// configuration naming it in <c>[provision.operator]</c> (ADR-0034,
-    /// amendment 2026-10-15); the configuration's path.
+    /// <c>authority.pem</c> and <c>authority.key</c>) beside a node's slice
+    /// declaring it in <c>[provision.operator]</c> (ADR-0034, amendment
+    /// 2026-10-15), signed by it through <c>xmip_cluster_signed_slice_v1</c>
+    /// (ADR-0031, amendment 2026-11-19); the slice's path.
     /// </summary>
     public string Kept()
     {
+        string folder = System.IO.Directory.CreateDirectory(
+            Path.Combine(Directory, "config")).FullName;
         string kept = System.IO.Directory.CreateDirectory(
-            Path.Combine(Directory, "authority")).FullName;
+            Path.Combine(folder, "authority")).FullName;
         File.WriteAllText(Path.Combine(kept, "authority.pem"), anchor.ExportCertificatePem());
         File.WriteAllText(Path.Combine(kept, "authority.key"), key.ExportPkcs8PrivateKeyPem());
 
-        string configuration = Path.Combine(Directory, "node.xmip");
-        File.WriteAllText(
-            configuration,
-            "[service]\nname = \"n\"\ncluster_name = \"c\"\nnode_name = \"d\"\n\n"
-                + "[provision.operator]\nauthority = \"authority\"\nlifetime = \"1h\"\n");
+        const string cluster = "[service]\nname = \"n\"\n\n[nodes.d.provision.operator]\n"
+            + "authority = \"authority\"\nlifetime = \"1h\"\n";
+        Assert.True(
+            RuntimeLibrary.Rules.Design.TrySignedSlice(
+                cluster, Path.Combine(folder, "cluster.xmip"), "d", "c", kept,
+                out string answer),
+            answer);
+        using System.Text.Json.JsonDocument signed = System.Text.Json.JsonDocument.Parse(answer);
+        string configuration = Path.Combine(folder, "node.xmip");
+        File.WriteAllText(configuration, signed.RootElement.GetProperty("text").GetString());
         return configuration;
     }
 

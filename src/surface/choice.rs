@@ -400,20 +400,19 @@ mod tests {
 
     #[test]
     fn a_path_is_resolved_beneath_its_base_with_no_dots_left() {
-        let base = std::env::temp_dir().join("a").join("b");
+        let folder = file::temporary::Folder::new("operate-resolve");
+        let base = folder.join("a").join("b");
         let resolved = resolve(Path::new("../c/./d.xmip"), &base);
 
-        assert_eq!(
-            resolved,
-            std::env::temp_dir().join("a").join("c").join("d.xmip")
-        );
+        assert_eq!(resolved, folder.join("a").join("c").join("d.xmip"));
     }
 
     #[test]
     fn a_table_names_its_surface_or_is_refused_in_its_own_keys() {
+        let base = file::temporary::Folder::new("operate-surface-named");
         let document = Document::of(
             "Surface = \"elsewhere\"".parse().expect("TOML"),
-            std::env::temp_dir(),
+            base.to_path_buf(),
         );
         let clock: Arc<dyn Clock> = Arc::new(xcore::SystemClock);
 
@@ -434,7 +433,8 @@ mod tests {
             [[Clusters]]\nSurface = \"snapshot\"\nSnapshot = \"c.xmip\""
             .parse()
             .expect("TOML");
-        let base = std::env::temp_dir();
+        let folder = file::temporary::Folder::new("operate-line-wins");
+        let base = folder.to_path_buf();
         let document = Document::of(table, base.clone());
         let line = SurfaceLine {
             local: Some("xmip-b".into()),

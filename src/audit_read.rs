@@ -96,7 +96,8 @@ mod tests {
     #[test]
     fn a_directory_not_made_yet_holds_nothing_and_a_query_it_does_not_take_is_refused() {
         // A directory that is no folder yet: nothing has been audited there.
-        let nowhere = std::env::temp_dir().join(format!("xmip-audit-read-{}", std::process::id()));
+        let folder = file::temporary::Folder::new("operate-audit-read");
+        let nowhere = folder.join("not-made");
         let read = read(Some(&nowhere), &[]).expect("read");
 
         assert!(read.file.ends_with("audit.toml"));

@@ -94,34 +94,43 @@ pub fn slices(cluster: &str, node: &str) -> Result<String, String> {
 }
 
 /// `node`'s document sliced from the cluster's file `cluster` and signed by
-/// the cluster's authority beside that file, made there where none is kept
-/// (`signed::signed_beside`; ADR-0031, amendment 2026-11-06). `argument` is
-/// `{"cluster","node"}`, the file's path and the node; the answer is
-/// `{"text","authority"}`, the file the node is given and the certificate it
-/// checks it by, which a surface writes beside it.
+/// the cluster's authority, the runtime's one slicing and signing
+/// (`signed::sliced_signed`; ADR-0031, amendments 2026-11-06 and
+/// 2026-11-19). `argument` is `{"cluster","node"}`, the file's path and the
+/// node, and where given `"name"`, the cluster's name the environment gives,
+/// and `"authority"`, the folder the authority is kept in, which signs in
+/// place of the one beside the file, made there where none is kept; the
+/// answer is `{"text","authority"}`, the file the node is given and the
+/// certificate it checks it by, which a surface writes beside it.
 ///
 /// # Errors
-/// As [`slices`]; an argument that is not the two; or the authority cannot
+/// As [`slices`]; an argument that is not those; or the authority cannot
 /// be kept.
 pub fn signed_slice(cluster: &str, argument: &str) -> Result<String, String> {
     #[derive(serde::Deserialize)]
     struct Asked {
         cluster: String,
         node: String,
+        name: Option<String>,
+        authority: Option<String>,
     }
     let asked: Asked = serde_json::from_str(argument)
         .map_err(|error| format!("the argument is not {{\"cluster\",\"node\"}}: {error}"))?;
     if document_kind(cluster) == DocumentKind::Node {
         return Err(NOT_A_CLUSTER.to_string());
     }
-    let sliced = configure::slice(cluster, &asked.node)?;
-    let name = configure::cluster::cluster_name(cluster)?.unwrap_or_default();
     let path = std::path::Path::new(&asked.cluster);
-    let text = runtime::signed::signed_beside(path, &name, cluster, &sliced)?;
-    let place = path
-        .parent()
-        .unwrap_or_else(|| std::path::Path::new("."))
-        .join(runtime::signed::AUTHORITY);
+    let kept = asked.authority.as_deref().map(std::path::Path::new);
+    let text =
+        runtime::signed::sliced_signed(cluster, path, &asked.node, asked.name.as_deref(), kept)?;
+    let place = kept.map_or_else(
+        || {
+            path.parent()
+                .unwrap_or_else(|| std::path::Path::new("."))
+                .join(runtime::signed::AUTHORITY)
+        },
+        std::path::Path::to_path_buf,
+    );
     let authority = std::fs::read_to_string(place.join(provision::issuer::CERTIFICATE))
         .map_err(|error| format!("the cluster's authority at {}: {error}", place.display()))?;
     json(&serde_json::json!({ "text": text, "authority": authority }))
@@ -247,6 +256,36 @@ mod tests {
         assert_eq!(
             slices(&format!("[service]\nnode_name = \"{one}\"\n"), ""),
             Err(NOT_A_CLUSTER.to_string())
+        );
+    }
+
+    #[test]
+    fn a_signed_slice_takes_the_cluster_and_authority_its_argument_names() {
+        let own = file::temporary::Folder::new("operate-signed-slice");
+        let kept = own.join("kept");
+        let authority = provision::Issuer::kept_or_made(&kept, "kept authority", 0, 3_153_600_000)
+            .expect("an authority");
+        let test = configure::fixture::test_cluster();
+        let node = test.node(0).name.clone();
+        let cluster = format!("{CLUSTER}\n[nodes.{node}]\n");
+        let argument = serde_json::json!({
+            "cluster": own.join("cluster.xmip").display().to_string(),
+            "node": node,
+            "name": test.name,
+            "authority": kept.display().to_string(),
+        })
+        .to_string();
+
+        let answer: serde_json::Value =
+            serde_json::from_str(&signed_slice(&cluster, &argument).expect("signed"))
+                .expect("JSON");
+        let text = answer["text"].as_str().expect("the slice");
+        let named = format!("cluster_name = \"{}\"", test.name);
+        assert!(text.contains(&named), "{text}");
+        assert_eq!(answer["authority"], authority.certificate());
+        assert!(
+            !own.join(runtime::signed::AUTHORITY).exists(),
+            "no authority made beside the file"
         );
     }
 }

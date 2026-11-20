@@ -96,8 +96,7 @@ mod tests {
 
     #[test]
     fn an_authority_is_set_up_and_a_node_carried_across_an_air_gap_is_registered_and_revoked() {
-        let base = std::env::temp_dir().join(format!("xmip-ffi-authority-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&base);
+        let base = file::temporary::Folder::new("operate-ffi-authority");
         let authority = base.join("authority");
         let node = base.join("node");
         let (code, set) = asked(
@@ -164,6 +163,5 @@ mod tests {
             status::INVALID,
             "never over a file"
         );
-        std::fs::remove_dir_all(&base).expect("removes what it wrote");
     }
 }

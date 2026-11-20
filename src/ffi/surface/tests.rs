@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use abi::ffi::status;
 use abi::operate::publication::Publication as PublicationHandle;
@@ -21,6 +21,7 @@ use super::{xmip_surface_free_v1, xmip_surface_wait_v1};
 use crate::ffi::publication::xmip_publication_free_v1;
 use crate::ffi::scope_index::xmip_scope_index_free_v1;
 use crate::ffi::text::borrow;
+use file::temporary::Folder;
 
 #[test]
 fn every_export_has_the_shape_the_binding_declares() {
@@ -67,7 +68,8 @@ fn node() -> String {
     configure::fixture::test_cluster().node_scope(0)
 }
 
-fn published(name: &str, evidence: &str) -> PathBuf {
+/// A publication saying `evidence`, written as `<name>.xmip` in `folder`.
+fn published(folder: &Path, name: &str, evidence: &str) -> PathBuf {
     let mut snapshot = Snapshot::new();
     snapshot.record_health(HealthRecord {
         scope: format!("{}/send/p", node()),
@@ -76,10 +78,7 @@ fn published(name: &str, evidence: &str) -> PathBuf {
         evidence: evidence.into(),
         observed_unix_nanos: 1,
     });
-    let path = std::env::temp_dir().join(format!(
-        "xmip-ffi-surface-{name}-{}.xmip",
-        std::process::id()
-    ));
+    let path = folder.join(format!("{name}.xmip"));
     let text = Publication::whole("a test", &cluster(), &snapshot).to_toml();
     std::fs::write(&path, text).expect("published");
     path
@@ -141,7 +140,8 @@ fn snapshot_over(path: &std::path::Path) -> *mut declared::Surface {
 
 #[test]
 fn a_snapshot_is_read_once_handed_with_its_tree_and_never_acted_on() {
-    let path = published("read", "full");
+    let folder = Folder::new("operate-surface-read");
+    let path = published(&folder, "read", "full");
     let surface = snapshot_over(&path);
     let mut answers = 0_u8;
     // SAFETY: a live surface and a writable answer.
@@ -214,12 +214,12 @@ fn a_snapshot_is_read_once_handed_with_its_tree_and_never_acted_on() {
 
     // SAFETY: a handle this section handed out, freed once.
     unsafe { xmip_surface_free_v1(surface) };
-    let _ = std::fs::remove_file(path);
 }
 
 #[test]
 fn a_follow_tells_at_once_then_each_replacement() {
-    let path = published("follow", "first");
+    let folder = Folder::new("operate-surface-follow");
+    let path = published(&folder, "follow", "first");
     let surface = snapshot_over(&path);
     let (mut told, mut revision) = (0_u64, 0_u64);
     // SAFETY: a live surface and writable answers.
@@ -229,9 +229,8 @@ fn a_follow_tells_at_once_then_each_replacement() {
     );
     assert_eq!(told, 1, "told once at once");
 
-    let next =
-        std::env::temp_dir().join(format!("xmip-ffi-surface-next-{}.xmip", std::process::id()));
-    std::fs::copy(published("follow-next", "second"), &next).expect("copied");
+    let next = folder.join("next.xmip");
+    std::fs::copy(published(&folder, "follow-next", "second"), &next).expect("copied");
     std::fs::rename(&next, &path).expect("replaced");
     // SAFETY: as above.
     assert_eq!(
@@ -242,14 +241,14 @@ fn a_follow_tells_at_once_then_each_replacement() {
 
     // SAFETY: a handle this section handed out, freed once.
     unsafe { xmip_surface_free_v1(surface) };
-    let _ = std::fs::remove_file(path);
 }
 
 #[test]
 fn a_follow_begun_before_its_directory_is_made_tells_once_it_is() {
-    let place =
-        std::env::temp_dir().join(format!("xmip-ffi-surface-arrival-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&place);
+    // The publications copied in are written apart, outside the folder
+    // followed.
+    let sources = Folder::new("operate-surface-sources");
+    let place = Folder::new("operate-surface-arrival");
     let directory = place.join("not").join("made");
     let path = directory.join("snapshot.xmip");
     let surface = snapshot_over(&path);
@@ -262,7 +261,7 @@ fn a_follow_begun_before_its_directory_is_made_tells_once_it_is() {
     assert_eq!(told, 1, "told at once that nothing is there");
 
     std::fs::create_dir_all(&directory).expect("made");
-    std::fs::copy(published("arrival", "first"), &path).expect("landed");
+    std::fs::copy(published(&sources, "arrival", "first"), &path).expect("landed");
     let mut seen = told;
     // SAFETY: as above.
     assert_eq!(
@@ -277,7 +276,7 @@ fn a_follow_begun_before_its_directory_is_made_tells_once_it_is() {
     unsafe { xmip_surface_wait_v1(surface, told, 300, &raw mut told, &raw mut revision) };
     seen = told;
     let next = directory.join("snapshot.xmip.next");
-    let second = published("arrival-next", "second");
+    let second = published(&sources, "arrival-next", "second");
     std::fs::copy(&second, &next).expect("copied");
     std::fs::rename(&next, &path).expect("replaced");
     // SAFETY: as above.
@@ -307,7 +306,6 @@ fn a_follow_begun_before_its_directory_is_made_tells_once_it_is() {
 
     // SAFETY: a handle this section handed out, freed once.
     unsafe { xmip_surface_free_v1(surface) };
-    let _ = std::fs::remove_dir_all(&place);
 }
 
 #[test]

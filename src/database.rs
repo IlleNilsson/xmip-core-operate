@@ -108,8 +108,8 @@ mod tests {
 
     #[test]
     fn scripts_are_written_into_a_folder_and_never_over_a_file() {
-        let folder =
-            std::env::temp_dir().join(format!("xmip-operate-database-{}", std::process::id()));
+        let place = file::temporary::Folder::new("operate-database");
+        let folder = place.join("upgrade");
         let upgrade = Upgrade {
             version: 2,
             scripts: vec![("1-to-2.sql".to_string(), "select 1;".to_string())],
@@ -122,6 +122,5 @@ mod tests {
         );
         let refused = write(&upgrade, &folder).expect_err("there already");
         assert!(refused.contains("nothing is overwritten"), "{refused}");
-        let _ = std::fs::remove_dir_all(&folder);
     }
 }

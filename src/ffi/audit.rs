@@ -399,9 +399,7 @@ mod tests {
 
     #[test]
     fn a_record_written_across_the_boundary_is_read_back_across_it() {
-        let directory =
-            std::env::temp_dir().join(format!("xmip-runtime-audit-read-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&directory);
+        let directory = file::temporary::Folder::new("operate-audit-read");
         let place = directory.to_string_lossy().into_owned();
         let pair = [borrow("url"), borrow("http://127.0.0.1:5087")];
         assert_eq!(call(&place, phase::FAILURE, &pair).0, status::OK);
@@ -451,16 +449,13 @@ mod tests {
                 .expect("words")
                 .starts_with("UNFINISHED: ")
         );
-        let _ = fs::remove_dir_all(&directory);
     }
 
     #[test]
     fn a_hidden_run_is_read_back_only_when_the_query_includes_it() {
-        let directory =
-            std::env::temp_dir().join(format!("xmip-runtime-audit-hidden-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&directory);
+        let directory = file::temporary::Folder::new("operate-audit-hidden");
         let place = directory.to_string_lossy().into_owned();
-        let hidden = ProgramAudit::new("probe", Some(FileSink::new(&directory)));
+        let hidden = ProgramAudit::new("probe", Some(FileSink::new(&*directory)));
         let scope = configure::fixture::test_cluster().scope();
         hidden.locate(&scope);
         hidden.hide();
@@ -478,7 +473,6 @@ mod tests {
         assert_eq!(answer["records"][1]["hidden"], true, "the older of the two");
         assert_eq!(answer["groups"][0]["who"], scope.as_str());
         assert_eq!(answer["groups"][0]["hidden"], true);
-        let _ = fs::remove_dir_all(&directory);
     }
 
     #[test]
@@ -492,9 +486,7 @@ mod tests {
 
     #[test]
     fn a_record_reaches_the_directory_the_caller_was_told() {
-        let directory =
-            std::env::temp_dir().join(format!("xmip-runtime-audit-{}", std::process::id()));
-        let _ = fs::remove_dir_all(&directory);
+        let directory = file::temporary::Folder::new("operate-audit");
         let pair = [borrow("url"), borrow("http://127.0.0.1:5087")];
 
         let (code, kept_as, said) = call(&directory.to_string_lossy(), phase::BEGIN, &pair);
@@ -512,7 +504,6 @@ mod tests {
             text.contains("\"url\" = \"http://127.0.0.1:5087\""),
             "{text}"
         );
-        let _ = fs::remove_dir_all(&directory);
     }
 
     #[test]

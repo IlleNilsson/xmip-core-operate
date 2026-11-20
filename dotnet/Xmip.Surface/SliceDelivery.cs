@@ -120,7 +120,8 @@ public sealed class SliceDelivery(string clusterPath, string directory, string? 
     /// <paramref name="name"/> and put the slice where it can go.</summary>
     public NodeDelivery Deliver(string text, string name)
     {
-        if (!RuntimeLibrary.Rules.Design.TrySignedSlice(text, clusterPath, name, out string answer))
+        if (!RuntimeLibrary.Rules.Design.TrySignedSlice(
+                text, clusterPath, name, null, null, out string answer))
         {
             return new NodeDelivery(name, new NodeDelivery.Standing.Refused(), answer);
         }

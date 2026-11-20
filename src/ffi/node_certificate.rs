@@ -101,8 +101,7 @@ mod tests {
 
     #[test]
     fn a_node_is_issued_into_a_folder_and_one_unnamed_is_refused() {
-        let base = std::env::temp_dir().join(format!("xmip-ffi-node-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&base);
+        let base = file::temporary::Folder::new("operate-ffi-node");
         let authority = base.join("authority").display().to_string();
         let folder = base.join("node").display().to_string();
         let mut room = vec![0u8; 8192];
@@ -142,6 +141,5 @@ mod tests {
             )
         };
         assert_eq!(refused, status::INVALID);
-        std::fs::remove_dir_all(&base).expect("removes what it wrote");
     }
 }

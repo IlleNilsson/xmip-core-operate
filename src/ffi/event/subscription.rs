@@ -236,12 +236,12 @@ mod tests {
 
     #[test]
     fn the_process_hub_is_listed_and_acted_on_and_a_stranger_act_is_refused() {
-        let at = std::env::temp_dir().join("xmip-runtime-subscription-ffi");
+        let at = file::temporary::Folder::new("operate-subscription");
         super::super::gate::allowed::policy();
         let cluster = configure::fixture::test_cluster();
         let (scope, node) = (cluster.scope(), cluster.node_scope(0));
         let asked = Filter::everything().beneath(&scope);
-        let audit = ProgramAudit::new("xmip-runtime tests", Some(audit_file::FileSink::new(&at)));
+        let audit = ProgramAudit::new("xmip-runtime tests", Some(audit_file::FileSink::new(&*at)));
         let subscriber = super::super::crossing::subscriber(&asked, &audit)
             .expect("the Party this process proves to be");
         let subscription = Hub::process()

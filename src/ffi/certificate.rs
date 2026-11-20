@@ -268,8 +268,7 @@ mod tests {
 
     #[test]
     fn a_request_is_written_for_a_person_and_a_distinguished_name_is_refused() {
-        let base = std::env::temp_dir().join(format!("xmip-ffi-request-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&base);
+        let base = file::temporary::Folder::new("operate-ffi-request");
         let folder = base.join("phone").display().to_string();
         // SAFETY: every pointer is to live, writable storage of its size.
         let (code, text) = answer(|out, cap, len| unsafe {
@@ -321,7 +320,6 @@ mod tests {
         });
         assert_eq!(code, status::OK, "{said}");
         assert_eq!(std::fs::read_to_string(&chain).expect("kept"), "second");
-        let _ = std::fs::remove_dir_all(&base);
     }
 
     fn lent(bytes: &[u8]) -> Slice {
@@ -377,6 +375,11 @@ mod tests {
             xmip_operator_sign_v1(borrow("no-such-node.xmip"), borrow(""), out, cap, len)
         });
         assert_eq!(code, status::INVALID);
-        assert!(text.contains("no-such-node.xmip"), "{text}");
+        // Its trust reads it first, and with no authority beside it trusts
+        // nothing (ADR-0031, amendment 2026-11-19).
+        assert!(
+            text.contains("no cluster authority's certificate"),
+            "{text}"
+        );
     }
 }

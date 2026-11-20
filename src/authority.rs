@@ -289,8 +289,7 @@ mod tests {
 
     #[test]
     fn an_authority_set_up_is_inspected_with_what_it_signed() {
-        let place =
-            std::env::temp_dir().join(format!("xmip-operate-authority-{}", std::process::id()));
+        let place = file::temporary::Folder::new("operate-authority");
         let authority = place.join("authority");
         let set_up = act(
             "set-up",
@@ -301,6 +300,5 @@ mod tests {
         assert_eq!(set_up["subject"], "test authority");
         assert_eq!(set_up["issued"], json!([]));
         assert_eq!(set_up["list"]["revoked"], 0);
-        let _ = std::fs::remove_dir_all(&place);
     }
 }

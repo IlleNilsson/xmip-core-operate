@@ -53,7 +53,8 @@ mod tests {
             .as_table()
             .cloned()
             .expect("its table");
-        let document = Document::of(table, std::env::temp_dir());
+        let base = file::temporary::Folder::new("operate-table");
+        let document = Document::of(table, base.to_path_buf());
 
         assert_eq!(
             decided(&Asked::Stated(SurfaceLine::default()), &document, false),

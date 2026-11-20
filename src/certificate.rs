@@ -57,7 +57,8 @@ mod tests {
 
     #[test]
     fn a_request_that_is_not_there_is_said_so_and_the_authority_is_named_for_its_cluster() {
-        let absent = std::env::temp_dir().join("xmip-operate-no-such-request.csr");
+        let folder = file::temporary::Folder::new("operate-no-request");
+        let absent = folder.join("no-such-request.csr");
 
         assert_eq!(
             sign_request(&absent, Path::new("node.xmip"), None),

@@ -72,7 +72,7 @@ mod tests {
     fn the_list_is_written_whole_once_its_length_is_asked() {
         let mut needed = 0usize;
         // An audit directory of the test's own, which holds no record.
-        let unread = std::env::temp_dir().join(format!("xmip-report-ffi-{}", std::process::id()));
+        let unread = file::temporary::Folder::new("operate-report-list");
         let arguments =
             &serde_json::json!({ "directory": unread.display().to_string() }).to_string();
         // SAFETY: a null buffer of capacity 0 asks for the length only; both
@@ -143,10 +143,7 @@ mod tests {
 
     #[test]
     fn a_probe_asked_its_length_first_is_audited_once_by_the_call_that_receives_it() {
-        let folder =
-            std::env::temp_dir().join(format!("xmip-report-ffi-once-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&folder);
-        std::fs::create_dir_all(&folder).expect("a folder");
+        let folder = file::temporary::Folder::new("operate-report-once");
         let configuration = folder.join("node.xmip");
         // The test cluster's first node, by place (ADR-0056, amendment
         // 2026-10-03), keeping Xmip Storage itself.
@@ -194,11 +191,10 @@ mod tests {
             )
         };
         assert_eq!(code, status::OK);
-        let file = xaudit::audit_store::stated(Some(&folder)).expect("a file");
+        let file = xaudit::audit_store::stated(Some(&*folder)).expect("a file");
         let query = xaudit::audit_query::AuditQuery::from_pairs([("action", report::PROBED)])
             .expect("a query");
         let page = xaudit::audit_store::ask(&file, &query).expect("read");
-        let _ = std::fs::remove_dir_all(&folder);
         assert_eq!(
             page.matched, 1,
             "the length asked for is not a probe recorded"
@@ -208,7 +204,8 @@ mod tests {
 
     #[test]
     fn a_configuration_that_cannot_be_read_fails_as_input_and_output() {
-        let missing = std::env::temp_dir().join(format!("xmip-report-none-{}", std::process::id()));
+        let folder = file::temporary::Folder::new("operate-report-none");
+        let missing = folder.join("node.xmip");
         let arguments = serde_json::json!({
             "report": "Regulation", "parameter": "GDPR",
             "configuration": missing.display().to_string(), "program": "xmip",

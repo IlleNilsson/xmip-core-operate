@@ -144,8 +144,8 @@ mod tests {
             asked(xmip_authority_name_v1, "c", ""),
             (status::OK, "Xmip cluster c authority".to_string())
         );
-        let absent = std::env::temp_dir().join("xmip-operate-written-no-request.csr");
-        let request = absent.display().to_string();
+        let folder = file::temporary::Folder::new("operate-written-no-request");
+        let request = folder.join("no-request.csr").display().to_string();
         let (code, said) = asked(
             xmip_operator_sign_file_v1,
             &request,
@@ -159,11 +159,9 @@ mod tests {
 
     #[test]
     fn scripts_are_written_once_and_never_over_a_file() {
-        let folder =
-            std::env::temp_dir().join(format!("xmip-operate-written-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&folder);
+        let place = file::temporary::Folder::new("operate-written");
         let upgrade = r#"{"version":2,"scripts":[{"name":"a.sql","text":"select 1;"}]}"#;
-        let into = folder.display().to_string();
+        let into = place.join("upgrade").display().to_string();
 
         let (code, paths) = asked(xmip_database_write_v1, upgrade, &into);
         assert_eq!(code, status::OK, "{paths}");
@@ -171,6 +169,5 @@ mod tests {
         let (again, refused) = asked(xmip_database_write_v1, upgrade, &into);
         assert_eq!(again, status::INVALID);
         assert!(refused.starts_with("REFUSED: "), "{refused}");
-        let _ = std::fs::remove_dir_all(&folder);
     }
 }
