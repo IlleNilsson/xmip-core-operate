@@ -608,3 +608,14 @@ host may bind. It tests no rule the runtime owns: it proves the surface returns 
 the runtime's export returns, and those rules are tested once, where they are
 written. `dotnet test dotnet/Xmip.Surface.Test` runs them, after `cargo build`
 in this repository has left the library the test assemblies load.
+
+A .NET test's folder is `TestFolder` (`dotnet/Xmip.Surface.Test/TestFolder.cs`),
+the one helper every .NET test project that makes one links, as it links
+`TestCluster`: `Directory.CreateTempSubdirectory` makes
+`xmip-<label>-<random>` under the temporary directory, and disposing it
+removes it with everything in it, also when the test fails; a path that must
+not exist is named inside it (`TestFolderTest`). `AsyncDisposalTest`, linked
+beside it, holds every test class xUnit disposes asynchronously — a bUnit
+page test — to its cleanup on that path, since xUnit never calls such a
+class's own `IDisposable.Dispose`; and `test/CSharp.Style.Test.ps1` refuses a
+temporary path made any other way (ADR-0021, amendment 2026-11-20).

@@ -275,7 +275,8 @@ public sealed class RuntimeRulesTest
     [Fact]
     public void AMissingLibraryAnswersNullWithTheReason()
     {
-        string missing = Path.Combine(Path.GetTempPath(), "no-such-xmip-runtime.dll");
+        using TestFolder folder = new("operate-runtime-missing");
+        string missing = folder.Inside("no-such-xmip-runtime.dll");
 
         Assert.Null(RuntimeRules.Load(missing, out string reason));
         Assert.Contains(missing, reason, StringComparison.Ordinal);
@@ -284,11 +285,11 @@ public sealed class RuntimeRulesTest
     [Fact]
     public void AnAuditRecordCrossesToTheCapabilityAndLandsInTheDirectoryItWasTold()
     {
-        string directory = Directory.CreateTempSubdirectory("xmip-operate-audit-").FullName;
+        using TestFolder directory = new("operate-audit");
 
         AuditOutcome outcome = Rules.Audit.Record(
             "Xmip.Operate.Test",
-            directory,
+            directory.Path,
             "probe",
             AuditPhase.Begin,
             AuditSeverity.Information,
@@ -296,10 +297,9 @@ public sealed class RuntimeRulesTest
             new Dictionary<string, string> { ["url"] = "http://127.0.0.1:5087", ["ö"] = "å" });
 
         Assert.Equal(new AuditOutcome.Kept(AuditKept.Persisted, string.Empty), outcome.Value);
-        string text = File.ReadAllText(Path.Combine(directory, "audit.toml"));
+        string text = File.ReadAllText(directory.Inside("audit.toml"));
         Assert.Contains("program = \"Xmip.Operate.Test\"", text, StringComparison.Ordinal);
         Assert.Contains("\"url\" = \"http://127.0.0.1:5087\"", text, StringComparison.Ordinal);
         Assert.Contains("\"ö\" = \"å\"", text, StringComparison.Ordinal);
-        Directory.Delete(directory, recursive: true);
     }
 }

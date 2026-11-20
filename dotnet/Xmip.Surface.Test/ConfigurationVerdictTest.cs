@@ -63,8 +63,8 @@ public sealed class ConfigurationVerdictTest
     [Fact]
     public void AnUnloadedRuntimeAnswersWithAVerdict()
     {
-        string nowhere = Path.Combine(Path.GetTempPath(), $"no-runtime-{Guid.NewGuid():n}.dll");
-        using ConfigurationRuntime surface = new(nowhere);
+        using TestFolder folder = new("no-runtime");
+        using ConfigurationRuntime surface = new(folder.Inside("no-runtime.dll"));
 
         ConfigurationVerdict validated = surface.Validate(Toml);
         ConfigurationVerdict planned = surface.Plan(Toml);

@@ -35,9 +35,9 @@ public sealed class SubscriptionSurfaceTest
             + $"state = \"{state}\"\npicked_up = {picked}\nheld = {held}\n";
     }
 
-    private static SnapshotOperator Over(string text, out string file)
+    private static SnapshotOperator Over(TestFolder folder, string text)
     {
-        file = Path.Combine(Path.GetTempPath(), $"xmip-subscriptions-{Guid.NewGuid():N}.xmip");
+        string file = folder.Inside("subscriptions.xmip");
         File.WriteAllText(file, text);
         return new SnapshotOperator(file);
     }
@@ -45,76 +45,64 @@ public sealed class SubscriptionSurfaceTest
     [Fact]
     public void ASnapshotListsWhatItsPublicationCarriesAndDeclinesEveryAct()
     {
-        SnapshotOperator surface = Over(Published(), out string file);
+        using TestFolder folder = new("subscriptions");
+        SnapshotOperator surface = Over(folder, Published());
 
-        try
-        {
-            SubscriptionList listed = surface.Subscriptions();
-            Assert.Equal(3, listed.Subscriptions.Count);
-            SubscriptionRecord held = listed.Subscriptions.Single(entry => entry.Name == "edi");
-            Assert.True(held.Paused);
-            Assert.Equal(9ul, held.Held);
+        SubscriptionList listed = surface.Subscriptions();
+        Assert.Equal(3, listed.Subscriptions.Count);
+        SubscriptionRecord held = listed.Subscriptions.Single(entry => entry.Name == "edi");
+        Assert.True(held.Paused);
+        Assert.Equal(9ul, held.Held);
 
-            foreach (SubscriptionAct act in Enum.GetValues<SubscriptionAct>())
-            {
-                SubscriptionOperation declined = surface.Act(held, act, "ilian", caller: null);
-                Assert.False(declined.Applied);
-                Assert.Equal(ActOutcome.Refused, declined.Outcome);
-                Assert.Equal(SnapshotOperator.NotActed, declined.Result);
-            }
-        }
-        finally
+        foreach (SubscriptionAct act in Enum.GetValues<SubscriptionAct>())
         {
-            File.Delete(file);
+            SubscriptionOperation declined = surface.Act(held, act, "ilian", caller: null);
+            Assert.False(declined.Applied);
+            Assert.Equal(ActOutcome.Refused, declined.Outcome);
+            Assert.Equal(SnapshotOperator.NotActed, declined.Result);
         }
     }
 
     [Fact]
     public void TheQueryDrillsFiltersAndSorts()
     {
-        SnapshotOperator surface = Over(Published(), out string file);
+        using TestFolder folder = new("subscriptions");
+        SnapshotOperator surface = Over(folder, Published());
 
-        try
-        {
-            IReadOnlyList<SubscriptionRecord> all = surface.Subscriptions().Subscriptions;
+        IReadOnlyList<SubscriptionRecord> all = surface.Subscriptions().Subscriptions;
 
-            Assert.Equal(
-                ["edi", "flat", "structured"],
-                new SubscriptionQuery().Apply(all).Select(s => s.Name));
-            Assert.Equal(
-                ["edi", "structured"],
-                new SubscriptionQuery { Location = Processing }.Apply(all)
-                    .Select(s => s.Name));
-            Assert.Equal(
-                ["structured"],
-                new SubscriptionQuery { Location = Processing, Name = "structured" }
-                    .Apply(all).Select(s => s.Name));
-            Assert.Equal(
-                ["edi", "structured", "flat"],
-                new SubscriptionQuery { Sort = "held", Order = "descending" }.Apply(all)
-                    .Select(s => s.Name));
-            Assert.Equal(
-                ["flat", "structured", "edi"],
-                new SubscriptionQuery { Sort = "picked-up", Order = "descending" }.Apply(all)
-                    .Select(s => s.Name));
-            Assert.Equal(
-                ["flat"],
-                new SubscriptionQuery { Pattern = $"*/{Sender}" }.Apply(all).Select(s => s.Name));
-            Assert.Equal(
-                ["edi"],
-                new SubscriptionQuery { Pattern = "*/subscription/ed?" }.Apply(all)
-                    .Select(s => s.Name));
-            Assert.Equal(Cluster.Name, SubscriptionQuery.Cluster(all[0]));
-            Assert.Equal(Processor, SubscriptionQuery.NodeName(all[0]));
+        Assert.Equal(
+            ["edi", "flat", "structured"],
+            new SubscriptionQuery().Apply(all).Select(s => s.Name));
+        Assert.Equal(
+            ["edi", "structured"],
+            new SubscriptionQuery { Location = Processing }.Apply(all)
+                .Select(s => s.Name));
+        Assert.Equal(
+            ["structured"],
+            new SubscriptionQuery { Location = Processing, Name = "structured" }
+                .Apply(all).Select(s => s.Name));
+        Assert.Equal(
+            ["edi", "structured", "flat"],
+            new SubscriptionQuery { Sort = "held", Order = "descending" }.Apply(all)
+                .Select(s => s.Name));
+        Assert.Equal(
+            ["flat", "structured", "edi"],
+            new SubscriptionQuery { Sort = "picked-up", Order = "descending" }.Apply(all)
+                .Select(s => s.Name));
+        Assert.Equal(
+            ["flat"],
+            new SubscriptionQuery { Pattern = $"*/{Sender}" }.Apply(all).Select(s => s.Name));
+        Assert.Equal(
+            ["edi"],
+            new SubscriptionQuery { Pattern = "*/subscription/ed?" }.Apply(all)
+                .Select(s => s.Name));
+        Assert.Equal(Cluster.Name, SubscriptionQuery.Cluster(all[0]));
+        Assert.Equal(Processor, SubscriptionQuery.NodeName(all[0]));
 
-            ArgumentException refused = Assert.Throws<ArgumentException>(
-                () => new SubscriptionQuery { Sort = "mood" }.Apply(all));
-            Assert.StartsWith("REFUSED", refused.Message, StringComparison.Ordinal);
-        }
-        finally
-        {
-            File.Delete(file);
-        }
+        ArgumentException refused = Assert.Throws<ArgumentException>(
+            () => new SubscriptionQuery { Sort = "mood" }.Apply(all));
+        Assert.StartsWith("REFUSED", refused.Message, StringComparison.Ordinal);
     }
 
     [Fact]

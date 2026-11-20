@@ -11,8 +11,7 @@ namespace Xmip.Surface.Test;
 /// </summary>
 public sealed class SliceDeliveryTest : IDisposable
 {
-    private readonly string _directory =
-        Directory.CreateTempSubdirectory("xmip-slice-delivery-").FullName;
+    private readonly TestFolder _directory = new("slice-delivery");
 
     /// <summary>A delivered file's text above its signature: the slice the
     /// cluster's authority signed (ADR-0031, amendment 2026-11-06).</summary>
@@ -26,10 +25,10 @@ public sealed class SliceDeliveryTest : IDisposable
     [Fact]
     public void EachNodeIsSlicedTheNodeStartedHereShippedAndAnotherNot()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string here = Estate.Cluster.Nodes[0];
         string there = Estate.Cluster.Nodes[1];
-        SliceDelivery delivery = new(cluster.Path, Path.Combine(_directory, "slices"), here);
+        SliceDelivery delivery = new(cluster.Path, _directory.Inside("slices"), here);
 
         IReadOnlyList<NodeDelivery> delivered = delivery.Deliver(cluster);
 
@@ -60,10 +59,10 @@ public sealed class SliceDeliveryTest : IDisposable
         // A node whose own [service] names another than its key does not
         // slice, and the runtime refuses an edit that would write one; a
         // file written by hand can hold it. The other node still slices.
-        string path = Estate.Written(_directory).Path;
+        string path = Estate.Written(_directory.Path).Path;
         File.AppendAllText(path, $"[nodes.{refused}.service]\nnode_name = \"elsewhere\"\n");
         ClusterConfiguration cluster = ClusterConfiguration.Open(path);
-        SliceDelivery delivery = new(cluster.Path, Path.Combine(_directory, "slices"), null);
+        SliceDelivery delivery = new(cluster.Path, _directory.Inside("slices"), null);
 
         IReadOnlyList<NodeDelivery> delivered = delivery.Deliver(cluster);
 
@@ -77,9 +76,9 @@ public sealed class SliceDeliveryTest : IDisposable
     [Fact]
     public async Task ConcurrentDeliveriesOfOneNodeDoNotCollide()
     {
-        string path = Estate.Written(_directory).Path;
+        string path = Estate.Written(_directory.Path).Path;
         string here = Estate.Cluster.Nodes[0];
-        SliceDelivery delivery = new(path, Path.Combine(_directory, "slices"), here);
+        SliceDelivery delivery = new(path, _directory.Inside("slices"), here);
         const int Writers = 8;
         const string NotWritten = "REFUSED: sliced, and not written";
 
@@ -134,9 +133,9 @@ public sealed class SliceDeliveryTest : IDisposable
     [Fact]
     public void ADeliveryIsNotStoppedByAnotherDeliveryWritingBesideIt()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string here = Estate.Cluster.Nodes[0];
-        SliceDelivery delivery = new(cluster.Path, Path.Combine(_directory, "slices"), here);
+        SliceDelivery delivery = new(cluster.Path, _directory.Inside("slices"), here);
         string slice = delivery.PathOf(here);
         Directory.CreateDirectory(Path.GetDirectoryName(slice)!);
 
@@ -154,9 +153,9 @@ public sealed class SliceDeliveryTest : IDisposable
     [Fact]
     public void ADeliveryWhoseClusterTextWasReplacedSinceDeliversNothing()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         SliceDelivery delivery =
-            new(cluster.Path, Path.Combine(_directory, "slices"), Estate.Cluster.Nodes[0]);
+            new(cluster.Path, _directory.Inside("slices"), Estate.Cluster.Nodes[0]);
 
         // A newer save replaced the file after this one read it.
         File.AppendAllText(cluster.Path, "# saved by a newer save\n");
@@ -175,6 +174,6 @@ public sealed class SliceDeliveryTest : IDisposable
 
     public void Dispose()
     {
-        Directory.Delete(_directory, recursive: true);
+        _directory.Dispose();
     }
 }

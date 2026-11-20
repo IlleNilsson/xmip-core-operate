@@ -29,35 +29,29 @@ public sealed class EventFeedTest
         RuntimeLibrary.Rules.Events.AuthorizeBy(_ => true);
     }
 
-    private static string Scratch()
-    {
-        return Directory.CreateTempSubdirectory("xmip-surface-event-").FullName;
-    }
-
     [Fact]
     public void AFeedNamesNoPartyAndIsRefusedAndAuditedWhereNoNodeServes()
     {
-        string directory = Scratch();
+        using TestFolder directory = new("surface-event");
         string scope = $"{Cluster.Scope}/surface-event-{Guid.NewGuid():n}";
-        EventFeed feed = new(new ProgramAudit("Xmip.Surface.Test", directory));
+        EventFeed feed = new(new ProgramAudit("Xmip.Surface.Test", directory.Path));
 
         UnauthorizedAccessException refused = Assert.Throws<UnauthorizedAccessException>(
             () => feed.Subscribe(new EventFilter { Scope = scope }));
         Assert.Contains(NoParty, refused.Message, StringComparison.Ordinal);
 
-        string text = File.ReadAllText(Path.Combine(directory, "audit.toml"));
+        string text = File.ReadAllText(directory.Inside("audit.toml"));
         Assert.Contains("program = \"Xmip.Surface.Test\"", text, StringComparison.Ordinal);
         Assert.Contains("action = \"event.subscribe\"", text, StringComparison.Ordinal);
         Assert.Contains(NoParty, text, StringComparison.Ordinal);
-        Directory.Delete(directory, recursive: true);
     }
 
     [Fact]
     public async Task FollowingIsRefusedAsItStartsAndAPublishReachesNobody()
     {
-        string directory = Scratch();
+        using TestFolder directory = new("surface-event");
         string scope = $"{Cluster.Scope}/surface-follow-{Guid.NewGuid():n}";
-        EventFeed feed = new(new ProgramAudit("Xmip.Surface.Test", directory));
+        EventFeed feed = new(new ProgramAudit("Xmip.Surface.Test", directory.Path));
         CancellationToken cancelled = TestContext.Current.CancellationToken;
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(async () =>
@@ -76,6 +70,5 @@ public sealed class EventFeedTest
             Outcome = EventOutcome.Success,
             Scope = scope + Sent,
         }));
-        Directory.Delete(directory, recursive: true);
     }
 }

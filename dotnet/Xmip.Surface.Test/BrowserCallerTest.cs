@@ -39,8 +39,7 @@ public sealed class BrowserCallerTest : IDisposable
     // What a test opened — sessions, certificates, circuits — ended with it.
     private readonly List<IDisposable> opened = [];
 
-    private readonly string scratch =
-        Directory.CreateTempSubdirectory("xmip-browser-").FullName;
+    private readonly TestFolder scratch = new("browser");
 
     // What the machine's environment states, set aside so the run's own
     // statement is the only one these tests read.
@@ -52,7 +51,7 @@ public sealed class BrowserCallerTest : IDisposable
         Environment.SetEnvironmentVariable(RoleAssignment.EnvironmentVariable, null);
     }
 
-    private string Audit => Path.Combine(scratch, "audit");
+    private string Audit => scratch.Inside("audit");
 
     public void Dispose()
     {
@@ -60,15 +59,7 @@ public sealed class BrowserCallerTest : IDisposable
         opened.Reverse();
         opened.ForEach(one => one.Dispose());
         authority.Dispose();
-
-        try
-        {
-            Directory.Delete(scratch, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A file the platform still holds; the temp directory keeps it.
-        }
+        scratch.Dispose();
     }
 
     [Fact]
@@ -346,7 +337,7 @@ public sealed class BrowserCallerTest : IDisposable
     // gate, claiming a name of their own.
     private SubscriptionOperation Pause(RoleContext caller)
     {
-        SnapshotOperator inner = TestHost.Acting(cluster, scratch);
+        SnapshotOperator inner = TestHost.Acting(cluster, scratch.Path);
         GatedOperator gated = new(inner, caller, new ProgramAudit("Xmip.Surface.Test", Audit));
 
         return gated.Act(

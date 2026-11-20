@@ -102,32 +102,25 @@ public sealed class ClusterSurfacesTest
         // A roll ends while an operator is reading it. The name stays in the
         // chooser — a cluster that vanished under the hand would be worse —
         // and the surface behind it answers nothing, said so.
-        string area = Directory.CreateTempSubdirectory("xmip-clusters-").FullName;
-        string ending = Path.Combine(area, $"{Second}-snapshot.xmip");
+        using TestFolder area = new("clusters");
+        string ending = area.Inside($"{Second}-snapshot.xmip");
         File.Copy(Fixture("cluster-cl2.xmip"), ending);
 
-        try
-        {
-            using ClusterSurfaces held = ClusterSurfaces.Over(
-                [new SnapshotOperator(Fixture("cluster.xmip")), new SnapshotOperator(ending)]);
+        using ClusterSurfaces held = ClusterSurfaces.Over(
+            [new SnapshotOperator(Fixture("cluster.xmip")), new SnapshotOperator(ending)]);
 
-            Assert.Equal([First, Second], held.Clusters);
-            Assert.True(held.Publishing(Second));
+        Assert.Equal([First, Second], held.Clusters);
+        Assert.True(held.Publishing(Second));
 
-            File.Delete(ending);
+        File.Delete(ending);
 
-            Assert.Equal([First, Second], held.Clusters);
-            Assert.False(held.Publishing(Second));
-            Assert.True(held.Publishing(First));
-            Assert.Empty(held.For(Second, includingHidden: false).Health(ScopeTree.Root));
-            Assert.Contains(
-                "no file at", held.For(Second, includingHidden: false).Source,
-                StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(area, recursive: true);
-        }
+        Assert.Equal([First, Second], held.Clusters);
+        Assert.False(held.Publishing(Second));
+        Assert.True(held.Publishing(First));
+        Assert.Empty(held.For(Second, includingHidden: false).Health(ScopeTree.Root));
+        Assert.Contains(
+            "no file at", held.For(Second, includingHidden: false).Source,
+            StringComparison.Ordinal);
     }
 
     [Fact]
@@ -277,10 +270,11 @@ public sealed class ClusterSurfacesTest
     /// file of its own.</summary>
     private sealed class Hidden : IDisposable
     {
+        private readonly TestFolder folder = new("hidden");
+
         public Hidden(bool hidden)
         {
-            Path = System.IO.Path.Combine(
-                System.IO.Path.GetTempPath(), $"xmip-hidden-{Guid.NewGuid():n}.xmip");
+            Path = folder.Inside("hidden.xmip");
             string text = File.ReadAllText(Fixture("cluster-cl2.xmip"));
 
             if (hidden)
@@ -296,7 +290,7 @@ public sealed class ClusterSurfacesTest
 
         public void Dispose()
         {
-            File.Delete(Path);
+            folder.Dispose();
         }
     }
 
@@ -329,22 +323,23 @@ public sealed class ClusterSurfacesTest
     /// <summary>A host's TOML document in a directory of its own.</summary>
     private sealed class Papers : IDisposable
     {
+        private readonly TestFolder folder = new("cluster-set");
+
         public Papers(string toml)
         {
-            Directory = System.IO.Directory.CreateTempSubdirectory("xmip-cluster-set-").FullName;
-            string file = Path.Combine(Directory, "gui.toml");
+            string file = folder.Inside("gui.toml");
             File.WriteAllText(file, toml);
             Configuration = TomlDocument.Read(file);
         }
 
-        public string Directory { get; }
+        public string Directory => folder.Path;
 
         public IConfigurationRoot Configuration { get; }
 
         public void Dispose()
         {
             (Configuration as IDisposable)?.Dispose();
-            System.IO.Directory.Delete(Directory, recursive: true);
+            folder.Dispose();
         }
     }
 }

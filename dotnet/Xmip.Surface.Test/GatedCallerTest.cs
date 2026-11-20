@@ -13,25 +13,18 @@ namespace Xmip.Surface.Test;
 /// </summary>
 public sealed class GatedCallerTest : IDisposable
 {
-    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-gated-").FullName;
+    private readonly TestFolder scratch = new("gated");
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(scratch, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A file the platform still holds; the temp directory keeps it.
-        }
+        scratch.Dispose();
     }
 
     [Fact]
     public async Task TwoCallersActingAtOnceEachReachTheSurfaceBehindTheGateAsTheirOwn()
     {
         Recording inner = new();
-        ProgramAudit audit = new("Xmip.Surface.Test", scratch);
+        ProgramAudit audit = new("Xmip.Surface.Test", scratch.Path);
         using RoleContext first = new(Role.Operator, RoleAssignment.ProcessCaller());
         using RoleContext second = new(Role.Operator, RoleAssignment.ProcessCaller());
         ulong firstHandle = first.Caller?.Handle ?? 0;

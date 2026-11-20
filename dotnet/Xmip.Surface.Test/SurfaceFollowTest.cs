@@ -15,37 +15,31 @@ public sealed class SurfaceFollowTest
     [Fact]
     public async Task TheCurrentAnswerComesFirstAndAChangedOneFollows()
     {
-        string copy = Path.Combine(Path.GetTempPath(), $"xmip-follow-{Guid.NewGuid():N}.xmip");
+        using TestFolder folder = new("follow");
+        string copy = folder.Inside("snapshot.xmip");
         File.Copy(Fixture, copy);
 
-        try
-        {
-            SnapshotOperator surface = new(copy);
-            ScopeSelection chosen = ScopeSelection.Exactly(ScopeTree.Root);
-            using CancellationTokenSource patience = new(TimeSpan.FromSeconds(30));
+        SnapshotOperator surface = new(copy);
+        ScopeSelection chosen = ScopeSelection.Exactly(ScopeTree.Root);
+        using CancellationTokenSource patience = new(TimeSpan.FromSeconds(30));
 
-            await using IAsyncEnumerator<IReadOnlyList<HealthRecord>> answers = SurfaceFollow
-                .Changes(
-                    surface,
-                    chosen,
-                    (read, now) => [.. now.Scopes.SelectMany(read.Health)],
-                    SurfaceFollow.Rows<HealthRecord>(),
-                    patience.Token)
-                .GetAsyncEnumerator(patience.Token);
+        await using IAsyncEnumerator<IReadOnlyList<HealthRecord>> answers = SurfaceFollow
+            .Changes(
+                surface,
+                chosen,
+                (read, now) => [.. now.Scopes.SelectMany(read.Health)],
+                SurfaceFollow.Rows<HealthRecord>(),
+                patience.Token)
+            .GetAsyncEnumerator(patience.Token);
 
-            Assert.True(await answers.MoveNextAsync().ConfigureAwait(true));
-            Assert.Equal(5, answers.Current.Count);
+        Assert.True(await answers.MoveNextAsync().ConfigureAwait(true));
+        Assert.Equal(5, answers.Current.Count);
 
-            File.WriteAllText(copy, $"node = \"{TestCluster.Read().Scope}\"\n");
-            File.SetLastWriteTimeUtc(copy, DateTime.UtcNow.AddSeconds(5));
+        File.WriteAllText(copy, $"node = \"{TestCluster.Read().Scope}\"\n");
+        File.SetLastWriteTimeUtc(copy, DateTime.UtcNow.AddSeconds(5));
 
-            Assert.True(await answers.MoveNextAsync().ConfigureAwait(true));
-            Assert.Empty(answers.Current);
-        }
-        finally
-        {
-            File.Delete(copy);
-        }
+        Assert.True(await answers.MoveNextAsync().ConfigureAwait(true));
+        Assert.Empty(answers.Current);
     }
 
     [Fact]

@@ -14,12 +14,12 @@ public sealed class SurfaceArrivalTest : IDisposable
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
 
     // Made, and the publication's directory two levels beneath it not.
-    private readonly string _place = Directory.CreateTempSubdirectory("xmip-arrival-").FullName;
+    private readonly TestFolder _place = new("arrival");
 
     [Fact]
     public async Task ASnapshotWatchBegunBeforeItsDirectoryFollowsOnceItIsMade()
     {
-        string directory = Path.Combine(_place, "not", "made");
+        string directory = Path.Combine(_place.Path, "not", "made");
         string path = Path.Combine(directory, "snapshot.xmip");
         SnapshotOperator surface = new(path);
         using CancellationTokenSource stop = new(Patience);
@@ -61,6 +61,6 @@ public sealed class SurfaceArrivalTest : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        Directory.Delete(_place, recursive: true);
+        _place.Dispose();
     }
 }

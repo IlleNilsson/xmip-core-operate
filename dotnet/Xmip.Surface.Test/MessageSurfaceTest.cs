@@ -31,9 +31,9 @@ public sealed class MessageSurfaceTest : IDisposable
     private static readonly string Sending = $"{Cluster.Scope}/node/{Sender}";
     private static readonly string Port = $"{Sending}/send/invoices";
 
-    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-journey-").FullName;
+    private readonly TestFolder scratch = new("journey");
 
-    private string Audit => Path.Combine(scratch, "audit");
+    private string Audit => scratch.Inside("audit");
 
     [Theory]
     [InlineData(MessageAct.Retry)]
@@ -124,20 +124,13 @@ public sealed class MessageSurfaceTest : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(scratch, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A file the platform still holds; the temp directory keeps it.
-        }
+        scratch.Dispose();
     }
 
     // A publication of the test cluster.
     private SnapshotOperator Over()
     {
-        string file = Path.Combine(scratch, $"snapshot-{Guid.NewGuid():N}.xmip");
+        string file = scratch.Inside($"snapshot-{Guid.NewGuid():N}.xmip");
         File.WriteAllText(file, $"node = \"{Cluster.Scope}\"\n");
 
         return new SnapshotOperator(file);

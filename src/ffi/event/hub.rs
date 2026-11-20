@@ -414,10 +414,11 @@ mod tests {
         (scope, cluster.node(0).name.clone())
     }
 
-    /// A temporary audit directory of this test's own, and where it is as
-    /// the boundary is handed it.
-    fn directory(name: &str) -> (file::temporary::Folder, String) {
-        let folder = file::temporary::Folder::new(&format!("operate-event-{name}"));
+    /// A temporary audit directory of this test's own, removed once audit's
+    /// keeper kept what its subscriptions handed it, and where it is as the
+    /// boundary is handed it.
+    fn directory(name: &str) -> (audit_file::temporary::Folder, String) {
+        let folder = audit_file::temporary::Folder::new(&format!("operate-event-{name}"));
         let at = folder.to_string_lossy().into_owned();
         (folder, at)
     }

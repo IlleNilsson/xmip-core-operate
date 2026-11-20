@@ -7,7 +7,7 @@ namespace Xmip.Surface.Test;
 /// (ADR-0052 clause 3): a TOML document names native or snapshot, and a
 /// document that names neither is refused.
 /// </summary>
-public sealed class SurfaceChoiceTest
+public sealed class SurfaceChoiceTest : IDisposable
 {
     [Fact]
     public void ARemoteThatNamesNoNodeIsRefusedInOneSentence()
@@ -170,9 +170,16 @@ public sealed class SurfaceChoiceTest
     // --snapshot, a cmdlet's -Remote, -Snapshot and -Library, and the
     // snapshot the prompt is told to follow (ADR-0052, amendments
     // 2026-09-18 and 2026-09-20). Held here since 2026-09-24; the executable's
-    // own tests held it before, and the prompt wrote it a second time.
-    private static readonly string Beside = Path.GetFullPath(
-        Path.Combine(Path.GetTempPath(), "xmip-surface-choice", "bin"));
+    // own tests held it before, and the prompt wrote it a second time. A
+    // name alone: nothing is made there.
+    private readonly TestFolder folder = new("surface-choice");
+
+    private string Beside => folder.Inside("bin");
+
+    public void Dispose()
+    {
+        folder.Dispose();
+    }
 
     [Fact]
     public void WithNothingStatedTheDocumentChooses()
@@ -317,22 +324,23 @@ public sealed class SurfaceChoiceTest
     /// read the way a host reads it.</summary>
     private sealed class Document : IDisposable
     {
+        private readonly TestFolder folder = new("surface-choice");
+
         public Document(string toml)
         {
-            Directory = System.IO.Directory.CreateTempSubdirectory("xmip-surface-choice-").FullName;
-            string file = Path.Combine(Directory, "gui.toml");
+            string file = folder.Inside("gui.toml");
             File.WriteAllText(file, toml);
             Configuration = TomlDocument.Read(file);
         }
 
-        public string Directory { get; }
+        public string Directory => folder.Path;
 
         public IConfigurationRoot Configuration { get; }
 
         public void Dispose()
         {
             (Configuration as IDisposable)?.Dispose();
-            System.IO.Directory.Delete(Directory, recursive: true);
+            folder.Dispose();
         }
     }
 }

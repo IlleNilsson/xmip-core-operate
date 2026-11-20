@@ -36,20 +36,21 @@ public sealed class SnapshotReadCostTest(ITestOutputHelper output) : IDisposable
 
     private const double Followed = 0.1;
 
-    private readonly string path = Path.Combine(
-        Path.GetTempPath(), $"xmip-snapshot-cost-{Guid.NewGuid():N}.xmip");
+    private readonly TestFolder folder = new("snapshot-cost");
+
+    private string Snapshot => folder.Inside("snapshot.xmip");
 
     [Fact]
     public void AViewReadsAClusterSizedSnapshotInWellUnderAMillisecondAfterTheFirstRead()
     {
-        File.WriteAllText(path, Publication(1));
-        SnapshotOperator surface = new(path);
+        File.WriteAllText(Snapshot, Publication(1));
+        SnapshotOperator surface = new(Snapshot);
 
         Stopwatch first = Stopwatch.StartNew();
         Assert.Equal(Records, View(surface));
         first.Stop();
         output.WriteLine(
-            $"first read, {new FileInfo(path).Length:N0} bytes and {Records:N0} records: "
+            $"first read, {new FileInfo(Snapshot).Length:N0} bytes and {Records:N0} records: "
             + $"{first.Elapsed.TotalMilliseconds:F1} ms");
 
         double view = Median(surface);
@@ -60,8 +61,8 @@ public sealed class SnapshotReadCostTest(ITestOutputHelper output) : IDisposable
     [Fact]
     public async Task AFollowedSnapshotIsReadOnceAsItChangesAndNeverByTheView()
     {
-        File.WriteAllText(path, Publication(1));
-        SnapshotOperator surface = new(path);
+        File.WriteAllText(Snapshot, Publication(1));
+        SnapshotOperator surface = new(Snapshot);
         using CancellationTokenSource stop = new(TimeSpan.FromSeconds(30));
         IAsyncEnumerator<SurfaceChange> follow =
             surface.WatchAsync(stop.Token).GetAsyncEnumerator(stop.Token);
@@ -76,8 +77,8 @@ public sealed class SnapshotReadCostTest(ITestOutputHelper output) : IDisposable
             Assert.Equal(Records, View(surface));
 
             // Replaced whole, as a publisher replaces it (observe::write_atomic).
-            File.WriteAllText(path + ".next", Publication(2));
-            File.Move(path + ".next", path, overwrite: true);
+            File.WriteAllText(Snapshot + ".next", Publication(2));
+            File.Move(Snapshot + ".next", Snapshot, overwrite: true);
             Stopwatch announced = Stopwatch.StartNew();
             Assert.True(await follow.MoveNextAsync());
             output.WriteLine(
@@ -106,7 +107,7 @@ public sealed class SnapshotReadCostTest(ITestOutputHelper output) : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
-        File.Delete(path);
+        folder.Dispose();
     }
 
     // What the topology page reads of a cluster when it renders.

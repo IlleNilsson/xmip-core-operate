@@ -47,21 +47,15 @@ public sealed class RuntimeProcessesTest
     [Fact]
     public void AFileThatIsNoDeclarationsIsRefusedInTheRuntimesWordsAndKept()
     {
-        string stranger = Path.Combine(Path.GetTempPath(), $"other-{Environment.ProcessId}.toml");
+        using TestFolder folder = new("operate-stranger");
+        string stranger = folder.Inside("other.toml");
         File.WriteAllText(stranger, "kept");
 
-        try
-        {
-            Assert.Equal(
-                XmipStatus.Invalid,
-                RuntimeRulesTest.Rules.Processes.Undeclare(stranger, out string refusal));
-            Assert.StartsWith("REFUSED", refusal, StringComparison.Ordinal);
-            Assert.True(File.Exists(stranger), "not a declaration's, so left where it is");
-        }
-        finally
-        {
-            File.Delete(stranger);
-        }
+        Assert.Equal(
+            XmipStatus.Invalid,
+            RuntimeRulesTest.Rules.Processes.Undeclare(stranger, out string refusal));
+        Assert.StartsWith("REFUSED", refusal, StringComparison.Ordinal);
+        Assert.True(File.Exists(stranger), "not a declaration's, so left where it is");
     }
 
     [Fact]

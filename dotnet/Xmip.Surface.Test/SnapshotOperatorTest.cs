@@ -22,7 +22,8 @@ public sealed class SnapshotOperatorTest
     [Fact]
     public void ANewPublicationIsReadAndAnUnchangedOneIsNotParsedAgain()
     {
-        string copy = Path.Combine(Path.GetTempPath(), $"xmip-snapshot-{Guid.NewGuid():N}.xmip");
+        using TestFolder folder = new("snapshot");
+        string copy = folder.Inside("snapshot.xmip");
         File.Copy(Fixture, copy);
         SnapshotOperator surface = new(copy);
 
@@ -34,7 +35,6 @@ public sealed class SnapshotOperatorTest
         File.SetLastWriteTimeUtc(copy, DateTime.UtcNow.AddSeconds(5));
 
         Assert.Empty(surface.Health(ScopeTree.Root));
-        File.Delete(copy);
     }
 
     [Fact]
@@ -42,7 +42,8 @@ public sealed class SnapshotOperatorTest
     {
         // 2026-09-18: a file being replaced answers a reader with a sharing
         // violation or access denied. That is a moment, not an empty estate.
-        string copy = Path.Combine(Path.GetTempPath(), $"xmip-snapshot-{Guid.NewGuid():N}.xmip");
+        using TestFolder folder = new("snapshot");
+        string copy = folder.Inside("snapshot.xmip");
         File.Copy(Fixture, copy);
         SnapshotOperator surface = new(copy);
         int before = surface.Health(ScopeTree.Root).Count;
@@ -56,7 +57,6 @@ public sealed class SnapshotOperatorTest
         File.WriteAllText(copy, $"node = \"{Receiver}\"\n");
         File.SetLastWriteTimeUtc(copy, DateTime.UtcNow.AddSeconds(5));
         Assert.Empty(surface.Health(ScopeTree.Root));
-        File.Delete(copy);
     }
 
     [Fact]
@@ -82,6 +82,7 @@ public sealed class SnapshotOperatorTest
         // This fixture names the processing node and publishes beneath the
         // receiving and the sending one: a drill that started at the
         // processing node would start on nothing.
+        using TestFolder folder = new("no-such-snapshot");
         Assert.Equal(ScopeTree.Root, new SnapshotOperator(Fixture).Root());
         Assert.Equal(
             Cluster.Scope,
@@ -89,7 +90,7 @@ public sealed class SnapshotOperatorTest
                 .Root());
         Assert.Equal(
             ScopeTree.Root,
-            new SnapshotOperator(Path.Combine(Path.GetTempPath(), "no-such-snapshot.xmip")).Root());
+            new SnapshotOperator(folder.Inside("no-such-snapshot.xmip")).Root());
     }
 
     [Fact]
@@ -150,8 +151,8 @@ public sealed class SnapshotOperatorTest
     [Fact]
     public void AMissingFileIsSaidSoAndReportsNothing()
     {
-        string missing = Path.Combine(
-            Path.GetTempPath(), $"no-such-snapshot-{Guid.NewGuid():n}.xmip");
+        using TestFolder folder = new("no-such-snapshot");
+        string missing = folder.Inside("no-such-snapshot.xmip");
         SnapshotOperator surface = new(missing);
 
         Assert.False(surface.Exists);
@@ -163,21 +164,15 @@ public sealed class SnapshotOperatorTest
     [Fact]
     public void AFileThatAppearsLaterIsReadOnTheNextQuery()
     {
-        string later = Path.Combine(Path.GetTempPath(), $"late-snapshot-{Guid.NewGuid():n}.xmip");
+        using TestFolder folder = new("late-snapshot");
+        string later = folder.Inside("late-snapshot.xmip");
         SnapshotOperator surface = new(later);
 
-        try
-        {
-            Assert.Empty(surface.Health(ScopeTree.Root));
+        Assert.Empty(surface.Health(ScopeTree.Root));
 
-            File.Copy(Fixture, later);
+        File.Copy(Fixture, later);
 
-            Assert.Equal(5, surface.Health(ScopeTree.Root).Count);
-        }
-        finally
-        {
-            File.Delete(later);
-        }
+        Assert.Equal(5, surface.Health(ScopeTree.Root).Count);
     }
 
     [Fact]

@@ -23,9 +23,11 @@ internal sealed class TestAuthority : IDisposable
 
     private readonly X509Certificate2 anchor;
 
+    private readonly TestFolder place;
+
     public TestAuthority(string name)
     {
-        Directory = System.IO.Directory.CreateTempSubdirectory($"xmip-tls-{name}-").FullName;
+        place = new TestFolder($"tls-{name}");
 
         CertificateRequest request =
             new($"CN=Xmip test anchor {name}", key, HashAlgorithmName.SHA256);
@@ -42,7 +44,7 @@ internal sealed class TestAuthority : IDisposable
     }
 
     /// <summary>Where this authority's files are.</summary>
-    public string Directory { get; }
+    public string Directory => place.Path;
 
     /// <summary>The anchor's PEM, what a peer trusts.</summary>
     public string Anchor { get; }
@@ -101,15 +103,7 @@ internal sealed class TestAuthority : IDisposable
     {
         anchor.Dispose();
         key.Dispose();
-
-        try
-        {
-            System.IO.Directory.Delete(Directory, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A file the platform still holds; the temp directory keeps it.
-        }
+        place.Dispose();
     }
 
     private (string Certificate, string PrivateKey) Issue(string name, string purpose)

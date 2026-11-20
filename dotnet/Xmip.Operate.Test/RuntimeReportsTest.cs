@@ -19,94 +19,73 @@ public sealed class RuntimeReportsTest
     [Fact]
     public void TheListComesBackAsTheHeadersJsonEachKindTheHeadersNumber()
     {
-        string directory = Directory.CreateTempSubdirectory("xmip-operate-reports-").FullName;
+        using TestFolder directory = new("operate-reports");
 
-        try
-        {
-            using JsonDocument listed = JsonDocument.Parse(Reports.Ask(
-                "list", new JsonObject { ["directory"] = directory }.ToJsonString()));
-            JsonElement[] kinds = [.. listed.RootElement.GetProperty("kinds").EnumerateArray()];
-            JsonElement[] reports =
-                [.. listed.RootElement.GetProperty("reports").EnumerateArray()];
+        using JsonDocument listed = JsonDocument.Parse(Reports.Ask(
+            "list", new JsonObject { ["directory"] = directory.Path }.ToJsonString()));
+        JsonElement[] kinds = [.. listed.RootElement.GetProperty("kinds").EnumerateArray()];
+        JsonElement[] reports =
+            [.. listed.RootElement.GetProperty("reports").EnumerateArray()];
 
-            Assert.Equal(
-                Enum.GetValues<ReportKind>().Select(kind => (int)kind),
-                kinds.Select(kind => kind.GetProperty("kind").GetInt32()));
-            Assert.All(kinds, kind => Assert.NotEmpty(kind.GetProperty("name").GetString()!));
-            Assert.NotEmpty(reports);
-            Assert.All(reports, report => Assert.True(Enum.IsDefined(
-                (ReportKind)report.GetProperty("kind").GetInt32())));
-            Assert.Contains(
-                reports, report => report.GetProperty("kind").GetInt32() == (int)ReportKind.Quest
-                    && report.GetProperty("available").GetBoolean());
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        Assert.Equal(
+            Enum.GetValues<ReportKind>().Select(kind => (int)kind),
+            kinds.Select(kind => kind.GetProperty("kind").GetInt32()));
+        Assert.All(kinds, kind => Assert.NotEmpty(kind.GetProperty("name").GetString()!));
+        Assert.NotEmpty(reports);
+        Assert.All(reports, report => Assert.True(Enum.IsDefined(
+            (ReportKind)report.GetProperty("kind").GetInt32())));
+        Assert.Contains(
+            reports, report => report.GetProperty("kind").GetInt32() == (int)ReportKind.Quest
+                && report.GetProperty("available").GetBoolean());
     }
 
     [Fact]
     public void AnAnswerLongerThanTheRoomIsAskedForAgainAndComesBackWhole()
     {
-        string directory = Directory.CreateTempSubdirectory("xmip-operate-reports-room-").FullName;
+        using TestFolder directory = new("operate-reports-room");
 
-        try
-        {
-            string arguments = new JsonObject { ["directory"] = directory }.ToJsonString();
-            string whole = Reports.Ask("list", arguments);
+        string arguments = new JsonObject { ["directory"] = directory.Path }.ToJsonString();
+        string whole = Reports.Ask("list", arguments);
 
-            Assert.True(whole.Length > 16, whole);
-            Assert.Equal(whole, Reports.Starting(16).Ask("list", arguments));
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        Assert.True(whole.Length > 16, whole);
+        Assert.Equal(whole, Reports.Starting(16).Ask("list", arguments));
     }
 
     [Fact]
     public void AProbeAskedAgainForRoomIsAuditedOnce()
     {
+        using TestFolder directory = new("operate-reports-once");
         TestCluster cluster = TestCluster.Read();
-        string directory = Directory.CreateTempSubdirectory("xmip-operate-reports-once-").FullName;
 
-        try
+        string listed = Reports.Ask(
+            "list", new JsonObject { ["directory"] = directory.Path }.ToJsonString());
+        using JsonDocument list = JsonDocument.Parse(listed);
+        JsonElement quest = list.RootElement.GetProperty("reports").EnumerateArray().First(
+            report => report.GetProperty("kind").GetInt32() == (int)ReportKind.Quest
+                && report.GetProperty("available").GetBoolean());
+        JsonObject arguments = new()
         {
-            string listed = Reports.Ask(
-                "list", new JsonObject { ["directory"] = directory }.ToJsonString());
-            using JsonDocument list = JsonDocument.Parse(listed);
-            JsonElement quest = list.RootElement.GetProperty("reports").EnumerateArray().First(
-                report => report.GetProperty("kind").GetInt32() == (int)ReportKind.Quest
-                    && report.GetProperty("available").GetBoolean());
-            JsonObject arguments = new()
-            {
-                ["report"] = quest.GetProperty("name").GetString(),
-                ["configuration"] = cluster.Path,
-                ["node"] = cluster.WithRole("storage"),
-                ["program"] = "Xmip.Operate.Test",
-                ["directory"] = directory,
-            };
+            ["report"] = quest.GetProperty("name").GetString(),
+            ["configuration"] = cluster.Path,
+            ["node"] = cluster.WithRole("storage"),
+            ["program"] = "Xmip.Operate.Test",
+            ["directory"] = directory.Path,
+        };
 
-            if (quest.TryGetProperty("parameter", out JsonElement parameter))
-            {
-                arguments["parameter"] =
-                    parameter.GetProperty("choices").EnumerateArray().First().GetString();
-            }
-
-            using JsonDocument probed =
-                JsonDocument.Parse(Reports.Starting(16).Ask("open", arguments.ToJsonString()));
-
-            Assert.True(probed.RootElement.TryGetProperty("took_ms", out _));
-            Assert.Equal(
-                1,
-                File.ReadAllLines(Path.Combine(directory, "audit.toml")).Count(
-                    line => line.Contains("\"quest.probe\"", StringComparison.Ordinal)));
-        }
-        finally
+        if (quest.TryGetProperty("parameter", out JsonElement parameter))
         {
-            Directory.Delete(directory, recursive: true);
+            arguments["parameter"] =
+                parameter.GetProperty("choices").EnumerateArray().First().GetString();
         }
+
+        using JsonDocument probed =
+            JsonDocument.Parse(Reports.Starting(16).Ask("open", arguments.ToJsonString()));
+
+        Assert.True(probed.RootElement.TryGetProperty("took_ms", out _));
+        Assert.Equal(
+            1,
+            File.ReadAllLines(directory.Inside("audit.toml")).Count(
+                line => line.Contains("\"quest.probe\"", StringComparison.Ordinal)));
     }
 
     [Fact]

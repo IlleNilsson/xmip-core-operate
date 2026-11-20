@@ -10,7 +10,8 @@ public sealed class OperatorTest
     [Fact]
     public void LoadingAMissingPathAnswersNullWithTheReason()
     {
-        string missing = Path.Combine(Path.GetTempPath(), "no-such-xmip-runtime.dll");
+        using TestFolder folder = new("operate-missing");
+        string missing = folder.Inside("no-such-xmip-runtime.dll");
 
         Operator? loaded = Operator.Load(missing, out string reason);
 
@@ -21,22 +22,14 @@ public sealed class OperatorTest
     [Fact]
     public void LoadingAFileThatIsNotALibraryAnswersNullWithTheReason()
     {
-        string bogus = Path.Combine(
-            Path.GetTempPath(),
-            $"xmip-operate-test-{Guid.NewGuid():n}.dll");
+        using TestFolder folder = new("operate-bogus");
+        string bogus = folder.Inside("bogus.dll");
 
         File.WriteAllText(bogus, "not a library");
 
-        try
-        {
-            Operator? loaded = Operator.Load(bogus, out string reason);
+        Operator? loaded = Operator.Load(bogus, out string reason);
 
-            Assert.Null(loaded);
-            Assert.Contains("could not be loaded", reason, StringComparison.Ordinal);
-        }
-        finally
-        {
-            File.Delete(bogus);
-        }
+        Assert.Null(loaded);
+        Assert.Contains("could not be loaded", reason, StringComparison.Ordinal);
     }
 }
