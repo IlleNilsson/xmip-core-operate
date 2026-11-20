@@ -389,7 +389,9 @@ mod tests {
     use super::*;
     use crate::ffi::text::{borrow, scope_text};
     use abi::operate::event::{action, outcome};
+    use std::path::PathBuf;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicPtr, Ordering};
     use std::sync::mpsc::{self, Sender};
 
     #[test]
@@ -662,6 +664,88 @@ mod tests {
         // SAFETY: the handle is live and unsubscribed once.
         unsafe { xmip_event_unsubscribe_v1(out) };
         drop(tell);
+    }
+
+    /// What a callback unsubscribing its own handle is handed: the handle,
+    /// once listen gave it; the audit file it reads the moment unsubscribe
+    /// returns; and where it says what it read.
+    struct Itself {
+        handle: AtomicPtr<Handle>,
+        file: PathBuf,
+        tell: Mutex<Sender<String>>,
+    }
+
+    extern "C" fn unsubscribing(context: *mut c_void, _event: *const Wire) {
+        // SAFETY: the context is the test's `Itself`, leaked so that it
+        // outlives the listener's thread; the handle is taken once, so it is
+        // unsubscribed once.
+        unsafe {
+            let itself = &*context.cast::<Itself>();
+            let handle = itself.handle.swap(core::ptr::null_mut(), Ordering::AcqRel);
+            if !handle.is_null() {
+                xmip_event_unsubscribe_v1(handle);
+                let kept = std::fs::read_to_string(&itself.file).unwrap_or_default();
+                let _ = itself.tell.lock().expect("tell").send(kept);
+            }
+        }
+    }
+
+    #[test]
+    fn a_listener_unsubscribed_in_its_own_callback_returns_with_its_records_kept() {
+        // The header: unsubscribe called from inside the callback returns
+        // without waiting for it, and once the subscription's audit records
+        // are kept (ADR-0065, amendment 2026-11-20).
+        super::super::gate::allowed::policy();
+        let (_audit, at) = directory("listen-itself");
+        let (cluster, node) = apart("listen-itself");
+        let (tell, heard) = mpsc::channel();
+        let itself: &'static Itself = Box::leak(Box::new(Itself {
+            handle: AtomicPtr::new(core::ptr::null_mut()),
+            file: std::path::Path::new(&at).join(xaudit::audit_store::FILE_NAME),
+            tell: Mutex::new(tell),
+        }));
+        let filter = EventFilter {
+            types: core::ptr::null(),
+            types_len: 0,
+            outcomes: core::ptr::null(),
+            outcomes_len: 0,
+            scope: borrow(&cluster),
+            party: Str::empty(),
+        };
+        let (mut out, mut said, mut said_len) = (core::ptr::null_mut(), [0u8; 64], 0);
+        let context: *const Itself = itself;
+        // SAFETY: every pointer is to a live local of the stated size, and
+        // the context lives as long as the process.
+        let code = unsafe {
+            xmip_event_listen_v1(
+                borrow("xmip-core-runtime tests"),
+                borrow(&at),
+                &raw const filter,
+                0,
+                unsubscribing,
+                context.cast_mut().cast(),
+                &raw mut out,
+                said.as_mut_ptr(),
+                said.len(),
+                &raw mut said_len,
+            )
+        };
+        assert_eq!(code, status::OK);
+        itself.handle.store(out, Ordering::Release);
+
+        publish(&raised(&format!("{cluster}/node/{node}"), &[]));
+
+        let kept = heard
+            .recv_timeout(Duration::from_secs(5))
+            .expect("called back");
+        let actions: Vec<&str> = kept
+            .lines()
+            .filter_map(|line| line.strip_prefix("action = "))
+            .collect();
+        assert!(
+            actions.contains(&"\"event.unsubscribe\""),
+            "unsubscribe returned with the close record kept; kept: {actions:?}"
+        );
     }
 
     #[test]
