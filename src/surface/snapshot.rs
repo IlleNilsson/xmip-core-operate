@@ -283,3 +283,57 @@ impl SnapshotSurface {
         self.refresh(true).1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Read;
+    use std::sync::Arc;
+
+    use file::temporary::Folder;
+    use observe::publication::write_atomic;
+    use observe::{Health, HealthRecord, Publication, Snapshot};
+
+    use super::SnapshotSurface;
+    use crate::surface::OperatorSurface;
+    use crate::surface::scope_tree::ROOT;
+
+    // A publication of `records` records, as a publisher writes it.
+    fn publication(records: usize) -> String {
+        let cluster = configure::fixture::test_cluster();
+        let mut snapshot = Snapshot::new();
+        for record in 0..records {
+            snapshot.record_health(HealthRecord {
+                scope: format!("{}/send/p{record}", cluster.node_scope(0)),
+                health: Health::Fine,
+                severity: 0,
+                evidence: String::new(),
+                observed_unix_nanos: 1,
+            });
+        }
+        Publication::whole("a test", &cluster.scope(), &snapshot).to_toml()
+    }
+
+    #[test]
+    fn a_publication_renamed_over_a_file_being_read_is_read_whole_on_every_system() {
+        // The publisher's collision with a reader: the next publication
+        // renamed over the file a reader holds open (`write_atomic`). The
+        // name is the next file's at once, whole, and the reader's open file
+        // is the last, whole: neither is torn or an empty estate. A reader
+        // whose open Windows refuses meanwhile keeps what it read last
+        // (Xmip.Surface.Test, SnapshotOperatorTest).
+        let folder = Folder::new("operate-snapshot-collision");
+        let path = folder.join("snapshot.xmip");
+        let last = publication(2);
+        write_atomic(&path, &last).expect("published");
+        let surface = SnapshotSurface::new(&path, Arc::new(xcore::SystemClock));
+        assert_eq!(surface.health(ROOT).len(), 2);
+
+        let mut reading = std::fs::File::open(&path).expect("opened");
+        write_atomic(&path, &publication(3)).expect("renamed over the file being read");
+
+        assert_eq!(surface.health(ROOT).len(), 3, "the next, whole");
+        let mut read = String::new();
+        reading.read_to_string(&mut read).expect("read");
+        assert_eq!(read, last, "the last, whole, to the reader holding it");
+    }
+}

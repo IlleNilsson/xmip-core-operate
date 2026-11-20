@@ -1,4 +1,5 @@
 using Xmip.Abi.Operate;
+using Xmip.Surface;
 
 namespace Xmip.Operate.Test;
 
@@ -118,19 +119,13 @@ public sealed class RemoteBuildTest
         Assert.StartsWith(RemoteBuild.Sentence, refused.Message, StringComparison.Ordinal);
     }
 
-    // The estate's remote build, in the working area at its root.
+    // The estate's remote build, in the working area at its root: the
+    // directory holding architecture.toml, found by the one rule every .NET
+    // host and test finds the estate by (TomlDocument.BasePath).
     private static string Built()
     {
-        DirectoryInfo? at = new(AppContext.BaseDirectory);
-
-        while (at is not null && !Directory.Exists(Path.Combine(at.FullName, ".ai-interaction")))
-        {
-            at = at.Parent;
-        }
-
-        string root = at?.FullName ?? AppContext.BaseDirectory;
-
         return Path.Combine(
-            root, ".ai-interaction", "target-remote", "debug", NativeRuntime.FileName);
+            TomlDocument.BasePath(AppContext.BaseDirectory),
+            ".ai-interaction", "target-remote", "debug", NativeRuntime.FileName);
     }
 }

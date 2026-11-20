@@ -335,9 +335,13 @@ fn a_line_over_a_document_is_decided_in_the_table_s_own_words() {
         line,
         r#"{"Surface":"local","Local":"xmip-a"}"#,
     );
+    // Read as JSON, never compared as text: a map's order is serde_json's,
+    // and another crate in the estate's one workspace may turn on its
+    // `preserve_order`.
+    assert_eq!(code, status::OK);
     assert_eq!(
-        (code, chosen.as_str()),
-        (status::OK, r#"{"endpoint":"xmip-a","surface":"local"}"#)
+        serde_json::from_str::<Value>(&chosen).expect("JSON"),
+        serde_json::json!({ "endpoint": "xmip-a", "surface": "local" })
     );
 
     let (code, refused) = said(
@@ -363,7 +367,10 @@ fn a_line_over_a_document_is_decided_in_the_table_s_own_words() {
     assert!(unlisted.starts_with("NOT LISTED: src"), "{unlisted}");
     let at = node();
     let (_, port) = said(xmip_surface_port_at_v1, &format!("{at}/send/p/x"), "");
-    assert_eq!(port, format!(r#"{{"node":"{at}","port":"p"}}"#));
+    assert_eq!(
+        serde_json::from_str::<Value>(&port).expect("JSON"),
+        serde_json::json!({ "node": at.as_str(), "port": "p" })
+    );
     assert_eq!(said(xmip_surface_remote_refusal_v1, "node1:7401", "").1, "");
     assert!(
         said(xmip_surface_local_refusal_v1, " ", "")

@@ -42,6 +42,18 @@ public sealed class SnapshotOperatorTest
     {
         // 2026-09-18: a file being replaced answers a reader with a sharing
         // violation or access denied. That is a moment, not an empty estate.
+        // Windows's alone: elsewhere no open is refused for sharing (.NET's
+        // FileShare.None is an advisory lock there, which no reader takes),
+        // and the publisher renames a whole file over the last, so a reader
+        // reads the last or the next whole; the runtime's own test holds
+        // that on every system (operate::surface::snapshot, a publication
+        // renamed over a file being read). Elsewhere it is said skipped, in
+        // words, never passed.
+        Assert.SkipUnless(
+            OperatingSystem.IsWindows(),
+            "a read refused for sharing is Windows's alone; the runtime's own test holds a "
+                + "publication renamed over a file being read on every system");
+
         using TestFolder folder = new("snapshot");
         string copy = folder.Inside("snapshot.xmip");
         File.Copy(Fixture, copy);
