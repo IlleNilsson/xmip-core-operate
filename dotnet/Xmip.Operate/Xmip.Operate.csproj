@@ -60,18 +60,16 @@
     Xmip.Surface), finds it. Section 7's rules are called in that library,
     never written here (ADR-0052, amendment 2026-09-24). Before any cargo
     build the glob matches nothing and nothing is copied; a deployment puts
-    its own runtime beside it. Where CARGO_TARGET_DIR names the estate's one
-    shared build directory (Publish-XmipChange sets it), the library is read
-    from there. Unset, the estate's shared directory is still the one read
-    where it exists, before this repository's own target: every landing
-    builds into the shared one, so the own target/debug holds whatever an
-    older plain `cargo build` left, and a console importing the estate module
-    built against that stale copy (the owner's console, 2026-10-13).
+    its own runtime beside it. It is read where cargo builds, by cargo's own
+    rule: CARGO_TARGET_DIR (Publish-XmipChange and the estate's tooling set
+    it, Get-XmipEstateLayout's Build), else the workspace root's target —
+    the estate's root, one workspace (ADR-0016, amendment 2026-11-20), or,
+    for this repository checked out alone, its own.
   -->
   <PropertyGroup>
-    <XmipEstateBuild>$(MSBuildThisFileDirectory)../../../../../../.ai-interaction/target-windows/debug</XmipEstateBuild>
+    <XmipEstateRoot>$(MSBuildThisFileDirectory)../../../../../../</XmipEstateRoot>
     <XmipRuntimeBuild Condition="'$(CARGO_TARGET_DIR)' != ''">$(CARGO_TARGET_DIR)/debug</XmipRuntimeBuild>
-    <XmipRuntimeBuild Condition="'$(CARGO_TARGET_DIR)' == '' And Exists('$(XmipEstateBuild)')">$(XmipEstateBuild)</XmipRuntimeBuild>
+    <XmipRuntimeBuild Condition="'$(XmipRuntimeBuild)' == '' And Exists('$(XmipEstateRoot)Cargo.toml')">$(XmipEstateRoot)target/debug</XmipRuntimeBuild>
     <XmipRuntimeBuild Condition="'$(XmipRuntimeBuild)' == ''">$(MSBuildThisFileDirectory)../../target/debug</XmipRuntimeBuild>
   </PropertyGroup>
   <ItemGroup>
