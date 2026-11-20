@@ -61,7 +61,8 @@ public sealed class DrillTest
     {
         // Until 2026-11-11 the Work Process card counted each Subscription
         // once for every node that published it.
-        string path = Path.Combine(Path.GetTempPath(), $"xmip-drill-{Guid.NewGuid():N}.xmip");
+        using TestFolder folder = new("drill");
+        string path = folder.Inside("drill.xmip");
         string[] names = ["Sales orders", "Invoices", "Payments"];
         string records = string.Concat(
             new[] { Receiving, Sending }.SelectMany(node => names.Select(name => $"""
@@ -76,7 +77,6 @@ public sealed class DrillTest
         Assert.Equal(
             names.Order(StringComparer.Ordinal),
             surface.Locations("process").Select(scope => ScopeTree.Parts(scope)[^1]));
-        File.Delete(path);
     }
 
     [Fact]
@@ -85,7 +85,8 @@ public sealed class DrillTest
         // 2026-09-26: a sending node's dns/regex Send Location was Done, its
         // identity step beneath it fine, and the drill's last step showed only
         // the fine step.
-        string path = Path.Combine(Path.GetTempPath(), $"xmip-drill-{Guid.NewGuid():N}.xmip");
+        using TestFolder folder = new("drill");
+        string path = folder.Inside("drill.xmip");
         File.WriteAllText(path, $$"""
             node = "{{Cluster}}"
             [[records]]
@@ -104,7 +105,6 @@ public sealed class DrillTest
         Assert.Equal(["identity"], surface.Index().Branches(location).Select(b => b.Label));
         Assert.Equal(location, surface.Describe(location).Worst);
         Assert.Equal(location, surface.Describe(Cluster).Worst);
-        File.Delete(path);
     }
 
     [Fact]
@@ -112,7 +112,8 @@ public sealed class DrillTest
     {
         // 2026-09-26: the Receive card said 96,968 Streams, of which a few
         // thousand were received; the rest were the daily backlog's drain.
-        string path = Path.Combine(Path.GetTempPath(), $"xmip-drill-{Guid.NewGuid():N}.xmip");
+        using TestFolder folder = new("drill");
+        string path = folder.Inside("drill.xmip");
         File.WriteAllText(path, $$"""
             node = "{{Cluster}}"
             [[records]]
@@ -136,7 +137,6 @@ public sealed class DrillTest
         Assert.Equal(3UL, surface.Stage("receive").Streams);
         Assert.Equal(3UL, surface.MessagePath().Streams);
         Assert.Equal(3UL, surface.Figures($"{Receiving}/receive").Streams);
-        File.Delete(path);
     }
 
     [Fact]

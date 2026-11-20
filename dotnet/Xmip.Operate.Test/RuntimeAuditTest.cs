@@ -14,35 +14,27 @@ public sealed class RuntimeAuditTest
     [Fact]
     public void ARecordMadeFromDotNetIsReadBackWhole()
     {
-        string directory = Directory.CreateTempSubdirectory(
-            $"xmip-operate-audit-read-{Environment.ProcessId}-").FullName;
+        using TestFolder directory = new("operate-audit-read");
         RuntimeAudit audit = RuntimeRulesTest.Rules.Audit;
 
-        try
-        {
-            audit.Record(
-                "xmip-operate-test", directory, "probe", AuditPhase.Failure, AuditSeverity.Error,
-                "a failure", new Dictionary<string, string> { ["why"] = "a test" });
+        audit.Record(
+            "xmip-operate-test", directory.Path, "probe", AuditPhase.Failure, AuditSeverity.Error,
+            "a failure", new Dictionary<string, string> { ["why"] = "a test" });
 
-            AuditRead read = audit.Read(
-                directory, [new("severity", "Error"), new("sort", "program")]);
+        AuditRead read = audit.Read(
+            directory.Path, [new("severity", "Error"), new("sort", "program")]);
 
-            Assert.Equal(1, read.Read);
-            AuditEntry entry = Assert.Single(read.Records);
-            Assert.Equal("xmip-operate-test", entry.Program);
-            Assert.Equal("Failure", entry.Phase);
-            Assert.Equal("a test", entry.Properties["why"]);
-            Assert.Null(entry.Location);
-            Assert.Equal("a failure", entry.Summary);
-            Assert.Equal("host", Assert.Single(read.Groups).Kind);
-            Assert.Equal(["probe"], read.Actions);
-            Assert.Equal("at", read.Columns[0]);
-            Assert.Equal(["Information", "Warning", "Error"], read.Severities);
-        }
-        finally
-        {
-            Directory.Delete(directory, recursive: true);
-        }
+        Assert.Equal(1, read.Read);
+        AuditEntry entry = Assert.Single(read.Records);
+        Assert.Equal("xmip-operate-test", entry.Program);
+        Assert.Equal("Failure", entry.Phase);
+        Assert.Equal("a test", entry.Properties["why"]);
+        Assert.Null(entry.Location);
+        Assert.Equal("a failure", entry.Summary);
+        Assert.Equal("host", Assert.Single(read.Groups).Kind);
+        Assert.Equal(["probe"], read.Actions);
+        Assert.Equal("at", read.Columns[0]);
+        Assert.Equal(["Information", "Warning", "Error"], read.Severities);
     }
 
     [Fact]

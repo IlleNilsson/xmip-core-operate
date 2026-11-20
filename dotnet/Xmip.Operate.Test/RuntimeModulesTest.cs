@@ -14,7 +14,8 @@ public sealed class RuntimeModulesTest
     [Fact]
     public void ALibraryThatIsNotThereIsAnAnswerAndNotAnException()
     {
-        string missing = Path.Combine(Path.GetTempPath(), "no-such-xmip-module.dll");
+        using TestFolder folder = new("operate-module-missing");
+        string missing = folder.Inside("no-such-xmip-module.dll");
 
         ModuleProbed probed = RuntimeRulesTest.Rules.Modules.Probe(missing);
 

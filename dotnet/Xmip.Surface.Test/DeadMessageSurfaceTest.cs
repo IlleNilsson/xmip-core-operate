@@ -27,9 +27,9 @@ public sealed class DeadMessageSurfaceTest : IDisposable
     private static readonly string Processor = Cluster.WithRole("processing");
     private static readonly string Receiving = $"{Cluster.Scope}/node/{Receiver}";
 
-    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-dead-").FullName;
+    private readonly TestFolder scratch = new("dead");
 
-    private string Audit => Path.Combine(scratch, "audit");
+    private string Audit => scratch.Inside("audit");
 
     [Fact]
     public void ASnapshotListsWhatItsPublicationCarriesAndDeclinesTheReplay()
@@ -131,14 +131,7 @@ public sealed class DeadMessageSurfaceTest : IDisposable
 
     public void Dispose()
     {
-        try
-        {
-            Directory.Delete(scratch, recursive: true);
-        }
-        catch (IOException)
-        {
-            // A file the platform still holds; the temp directory keeps it.
-        }
+        scratch.Dispose();
     }
 
     private static string Id(DeadMessageRecord entry)
@@ -150,7 +143,7 @@ public sealed class DeadMessageSurfaceTest : IDisposable
     // second declined twice, the first once, the third not asked.
     private SnapshotOperator Over()
     {
-        string file = Path.Combine(scratch, $"snapshot-{Guid.NewGuid():N}.xmip");
+        string file = scratch.Inside($"snapshot-{Guid.NewGuid():N}.xmip");
         File.WriteAllText(
             file,
             $"node = \"{Cluster.Scope}\"\n"

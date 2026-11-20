@@ -98,8 +98,9 @@ public sealed class RuntimeEventsTest
 /// afterwards.</summary>
 internal sealed class Audited : IDisposable
 {
-    public string Directory { get; } =
-        System.IO.Directory.CreateTempSubdirectory("xmip-operate-event-").FullName;
+    private readonly TestFolder folder = new("operate-event");
+
+    public string Directory => folder.Path;
 
     private static readonly TestCluster Cluster = TestCluster.Read();
 
@@ -123,17 +124,6 @@ internal sealed class Audited : IDisposable
 
     public void Dispose()
     {
-        // The audit may still be closing the file; what it leaves is the
-        // temporary directory's.
-        try
-        {
-            System.IO.Directory.Delete(Directory, recursive: true);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        folder.Dispose();
     }
 }

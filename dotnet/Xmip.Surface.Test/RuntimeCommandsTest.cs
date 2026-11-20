@@ -9,17 +9,16 @@ namespace Xmip.Surface.Test;
 /// </summary>
 public sealed class RuntimeCommandsTest : IDisposable
 {
-    private readonly string _directory =
-        Directory.CreateTempSubdirectory("xmip-runtime-commands-").FullName;
+    private readonly TestFolder _directory = new("runtime-commands");
 
-    private string AuditDirectory => Path.Combine(_directory, "audit");
+    private string AuditDirectory => _directory.Inside("audit");
 
     private RuntimeCommands Commands(string clusterPath, string? node)
     {
         return new RuntimeCommands(
             Estate.Library(),
             new ProgramAudit("xmip-operations", AuditDirectory),
-            new SliceDelivery(clusterPath, Path.Combine(_directory, "slices"), node));
+            new SliceDelivery(clusterPath, _directory.Inside("slices"), node));
     }
 
     private string Audited()
@@ -30,7 +29,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     [Fact]
     public void ASaveWritesTheFileSlicesEachNodeAndAuditsEveryStep()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string here = Estate.Cluster.Nodes[0];
         Assert.True(cluster.TryEdit(
             new ClusterEdit.Set(["service"], ["name"], "\"xmip-saved\""), out string edit), edit);
@@ -55,7 +54,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     public void ANodesOwnDocumentIsNotSavedAndTheRefusalIsAudited()
     {
         ClusterConfiguration cluster =
-            ClusterConfiguration.Open(Path.Combine(_directory, "new.xmip"));
+            ClusterConfiguration.Open(_directory.Inside("new.xmip"));
         Assert.True(cluster.TryEdit(
             new ClusterEdit.Set(["service"], ["name"], "\"xmip\""), out string edit), edit);
 
@@ -70,7 +69,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     [Fact]
     public void ARefusedEditIsAuditedWithTheRuntimesSentence()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         ClusterEdit twice = new ClusterEdit.AddNode(Estate.Cluster.Nodes[0]);
         Assert.False(cluster.TryEdit(twice, out string refusal));
 
@@ -85,7 +84,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     public void TheNodeConfiguredHereIsPlannedFromItsSliceAndSaidNotToRun()
     {
         string here = Estate.Cluster.Nodes[0];
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         RuntimeCommands commands = Commands(cluster.Path, here);
 
         ConfigurationVerdict planned = commands.PlanNode();
@@ -101,7 +100,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     [Fact]
     public void ADesktopNamingNoNodePlansNone()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
 
         ConfigurationVerdict refused = Commands(cluster.Path, null).PlanNode();
 
@@ -112,7 +111,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     [Fact]
     public void ASaveOverAnotherEditorsChangeIsRefusedStaleAndAudited()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         Assert.True(cluster.TryEdit(
             new ClusterEdit.Set(["service"], ["name"], "\"mine\""), out string edit), edit);
         File.AppendAllText(cluster.Path, "# theirs\n");
@@ -131,7 +130,7 @@ public sealed class RuntimeCommandsTest : IDisposable
     public void APlanWhileASaveHoldsTheFileDeliversNothingAndIsRefused()
     {
         string here = Estate.Cluster.Nodes[0];
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         RuntimeCommands commands = Commands(cluster.Path, here);
 
         using (new FileStream(
@@ -148,6 +147,6 @@ public sealed class RuntimeCommandsTest : IDisposable
 
     public void Dispose()
     {
-        Directory.Delete(_directory, recursive: true);
+        _directory.Dispose();
     }
 }

@@ -48,9 +48,9 @@ public sealed class EventSubscriptionSurfaceTest
         };
     }
 
-    private static SnapshotOperator Over(string text, out string file)
+    private static SnapshotOperator Over(TestFolder folder, string text)
     {
-        file = Path.Combine(Path.GetTempPath(), $"xmip-subscriptions-{Guid.NewGuid():N}.xmip");
+        string file = folder.Inside("subscriptions.xmip");
         File.WriteAllText(file, text);
         return new SnapshotOperator(file);
     }
@@ -58,72 +58,60 @@ public sealed class EventSubscriptionSurfaceTest
     [Fact]
     public void ASnapshotListsWhatItsPublicationCarriesAndDeclinesEveryAct()
     {
-        SnapshotOperator surface = Over(Published(), out string file);
+        using TestFolder folder = new("subscriptions");
+        SnapshotOperator surface = Over(folder, Published());
 
-        try
-        {
-            EventSubscriptionList listed = surface.EventSubscriptions();
-            Assert.Equal(3, listed.EventSubscriptions.Count);
-            EventSubscriptionRecord held = listed.EventSubscriptions.Single(entry => entry.Id == 2);
-            Assert.True(held.Paused);
+        EventSubscriptionList listed = surface.EventSubscriptions();
+        Assert.Equal(3, listed.EventSubscriptions.Count);
+        EventSubscriptionRecord held = listed.EventSubscriptions.Single(entry => entry.Id == 2);
+        Assert.True(held.Paused);
 
-            foreach (EventSubscriptionAct act in Enum.GetValues<EventSubscriptionAct>())
-            {
-                EventSubscriptionOperation declined = surface.Act(held, act, "ilian", caller: null);
-                Assert.False(declined.Applied);
-                Assert.Equal(SnapshotOperator.NotActed, declined.Result);
-            }
-        }
-        finally
+        foreach (EventSubscriptionAct act in Enum.GetValues<EventSubscriptionAct>())
         {
-            File.Delete(file);
+            EventSubscriptionOperation declined = surface.Act(held, act, "ilian", caller: null);
+            Assert.False(declined.Applied);
+            Assert.Equal(SnapshotOperator.NotActed, declined.Result);
         }
     }
 
     [Fact]
     public void TheQueryDrillsFiltersAndSorts()
     {
-        SnapshotOperator surface = Over(Published(), out string file);
+        using TestFolder folder = new("subscriptions");
+        SnapshotOperator surface = Over(folder, Published());
 
-        try
-        {
-            IReadOnlyList<EventSubscriptionRecord> all =
-                surface.EventSubscriptions().EventSubscriptions;
+        IReadOnlyList<EventSubscriptionRecord> all =
+            surface.EventSubscriptions().EventSubscriptions;
 
-            // Who a subscriber is: its declared name, its identifier where
-            // it was declared with none; the default order is by it.
-            Assert.Equal(
-                ["operations", "on-call", "0199a0a0-0000-7000-8000-000000000004"],
-                all.OrderBy(s => s.Id).Select(EventSubscriptionQuery.Who));
-            Assert.Equal(
-                [4ul, 2ul, 1ul], new EventSubscriptionQuery().Apply(all).Select(s => s.Id));
-            Assert.Equal(
-                [4ul, 2ul],
-                new EventSubscriptionQuery { Location = Sending }.Apply(all)
-                    .Select(s => s.Id));
-            Assert.Equal(
-                [4ul],
-                new EventSubscriptionQuery { Location = Sending, Id = 4 }.Apply(all)
-                    .Select(s => s.Id));
-            Assert.Equal(
-                [2ul, 1ul, 4ul],
-                new EventSubscriptionQuery { Sort = "queued", Order = "descending" }.Apply(all)
-                    .Select(s => s.Id));
-            Assert.Equal(
-                [1ul],
-                new EventSubscriptionQuery { Pattern = $"*/{Receiver}" }.Apply(all)
-                    .Select(s => s.Id));
-            Assert.Equal(Cluster.Name, EventSubscriptionQuery.Cluster(all[0]));
-            Assert.Equal(Receiver, EventSubscriptionQuery.NodeName(all[0]));
+        // Who a subscriber is: its declared name, its identifier where
+        // it was declared with none; the default order is by it.
+        Assert.Equal(
+            ["operations", "on-call", "0199a0a0-0000-7000-8000-000000000004"],
+            all.OrderBy(s => s.Id).Select(EventSubscriptionQuery.Who));
+        Assert.Equal(
+            [4ul, 2ul, 1ul], new EventSubscriptionQuery().Apply(all).Select(s => s.Id));
+        Assert.Equal(
+            [4ul, 2ul],
+            new EventSubscriptionQuery { Location = Sending }.Apply(all)
+                .Select(s => s.Id));
+        Assert.Equal(
+            [4ul],
+            new EventSubscriptionQuery { Location = Sending, Id = 4 }.Apply(all)
+                .Select(s => s.Id));
+        Assert.Equal(
+            [2ul, 1ul, 4ul],
+            new EventSubscriptionQuery { Sort = "queued", Order = "descending" }.Apply(all)
+                .Select(s => s.Id));
+        Assert.Equal(
+            [1ul],
+            new EventSubscriptionQuery { Pattern = $"*/{Receiver}" }.Apply(all)
+                .Select(s => s.Id));
+        Assert.Equal(Cluster.Name, EventSubscriptionQuery.Cluster(all[0]));
+        Assert.Equal(Receiver, EventSubscriptionQuery.NodeName(all[0]));
 
-            ArgumentException refused = Assert.Throws<ArgumentException>(
-                () => new EventSubscriptionQuery { Sort = "mood" }.Apply(all));
-            Assert.StartsWith("REFUSED", refused.Message, StringComparison.Ordinal);
-        }
-        finally
-        {
-            File.Delete(file);
-        }
+        ArgumentException refused = Assert.Throws<ArgumentException>(
+            () => new EventSubscriptionQuery { Sort = "mood" }.Apply(all));
+        Assert.StartsWith("REFUSED", refused.Message, StringComparison.Ordinal);
     }
 
     [Fact]

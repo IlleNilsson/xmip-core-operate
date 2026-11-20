@@ -11,11 +11,6 @@ namespace Xmip.Surface.Test;
 /// </summary>
 public sealed class ProgramAuditTest
 {
-    private static string Scratch()
-    {
-        return Directory.CreateTempSubdirectory("xmip-surface-audit-").FullName;
-    }
-
     [Fact]
     public void AValueIsSaidOneWayWhicheverProgramRecordsIt()
     {
@@ -41,46 +36,44 @@ public sealed class ProgramAuditTest
     [Fact]
     public void AnActLandsInTheDirectoryTheProgramWasTold()
     {
-        string directory = Scratch();
-        ProgramAudit audit = new("Xmip.Surface.Test", directory);
+        using TestFolder directory = new("surface-audit");
+        ProgramAudit audit = new("Xmip.Surface.Test", directory.Path);
 
         AuditOutcome outcome = audit.Record(
             "start", AuditPhase.Begin, AuditSeverity.Information, "started",
             new Dictionary<string, string> { ["url"] = "http://127.0.0.1:5087" });
 
         Assert.Equal(new AuditOutcome.Kept(AuditKept.Persisted, string.Empty), outcome.Value);
-        string text = File.ReadAllText(Path.Combine(directory, "audit.toml"));
+        string text = File.ReadAllText(directory.Inside("audit.toml"));
         Assert.Contains("program = \"Xmip.Surface.Test\"", text, StringComparison.Ordinal);
         Assert.Contains("action = \"start\"", text, StringComparison.Ordinal);
-        Directory.Delete(directory, recursive: true);
     }
 
     [Fact]
     public void AFailureCarriesTheExceptionTypeAndItsDetailOnce()
     {
-        string directory = Scratch();
-        ProgramAudit audit = new("Xmip.Surface.Test", directory);
+        using TestFolder directory = new("surface-audit");
+        ProgramAudit audit = new("Xmip.Surface.Test", directory.Path);
 
         InvalidOperationException boom = new("boom");
         AuditOutcome? outcome = audit.Failed("unhandled", boom);
 
         Assert.Equal(new AuditOutcome.Kept(AuditKept.Persisted, string.Empty), outcome?.Value);
         Assert.Null(audit.Failed("host", boom));
-        string text = File.ReadAllText(Path.Combine(directory, "audit.toml"));
+        string text = File.ReadAllText(directory.Inside("audit.toml"));
         Assert.Contains("phase = \"Failure\"", text, StringComparison.Ordinal);
         Assert.Contains("severity = \"Error\"", text, StringComparison.Ordinal);
         Assert.Contains("message = \"boom\"", text, StringComparison.Ordinal);
         Assert.Contains(
             "\"exception\" = \"System.InvalidOperationException\"", text, StringComparison.Ordinal);
         Assert.Single(text.Split("[[record]]", StringSplitOptions.RemoveEmptyEntries));
-        Directory.Delete(directory, recursive: true);
     }
 
     [Fact]
     public void WhatAProgramRecordedItReadsBackByTheWordsOfTheQuery()
     {
-        string directory = Scratch();
-        ProgramAudit audit = new("Xmip.Surface.Test", directory);
+        using TestFolder directory = new("surface-audit");
+        ProgramAudit audit = new("Xmip.Surface.Test", directory.Path);
         audit.Record("start", AuditPhase.Begin, AuditSeverity.Information);
         audit.Record("stop", AuditPhase.Finished, AuditSeverity.Warning, "stopped");
 
@@ -127,7 +120,6 @@ public sealed class ProgramAuditTest
         AuditChain after = Assert.Single(sealedRead.Chains);
         Assert.Equal(3, after.Records);
         Assert.True(after.Whole, after.Said);
-        Directory.Delete(directory, recursive: true);
     }
 
     [Fact]

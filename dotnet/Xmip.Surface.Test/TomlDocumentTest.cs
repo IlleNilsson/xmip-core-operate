@@ -40,9 +40,9 @@ public sealed class TomlDocumentTest
     [Fact]
     public void AFileThatIsNotThereReadsAsAnEmptyDocument()
     {
-        string missing = Path.Combine(Path.GetTempPath(), $"absent-{Guid.NewGuid():n}.toml");
+        using TestFolder folder = new("absent");
 
-        Assert.Empty(TomlDocument.Read(missing).AsEnumerable());
+        Assert.Empty(TomlDocument.Read(folder.Inside("absent.toml")).AsEnumerable());
     }
 
     [Fact]
@@ -85,10 +85,11 @@ public sealed class TomlDocumentTest
 
     private sealed class Papers : IDisposable
     {
+        private readonly TestFolder folder = new("document");
+
         public Papers(string text)
         {
-            Path = System.IO.Path.Combine(
-                System.IO.Path.GetTempPath(), $"document-{Guid.NewGuid():n}.toml");
+            Path = folder.Inside("document.toml");
             File.WriteAllText(Path, text);
         }
 
@@ -96,7 +97,7 @@ public sealed class TomlDocumentTest
 
         public void Dispose()
         {
-            File.Delete(Path);
+            folder.Dispose();
         }
     }
 }

@@ -18,16 +18,16 @@ public sealed class FailedMessageSurfaceTest : IDisposable
     private static readonly string Receiving =
         $"{Cluster.Scope}/node/{Cluster.WithRole("receiving")}";
 
-    private readonly string scratch = Directory.CreateTempSubdirectory("xmip-failed-").FullName;
+    private readonly TestFolder scratch = new("failed");
 
     public void Dispose()
     {
-        Directory.Delete(scratch, recursive: true);
+        scratch.Dispose();
     }
 
     private SnapshotOperator Published()
     {
-        string orders = Path.Combine(scratch, "orders").Replace('\\', '/');
+        string orders = scratch.Inside("orders").Replace('\\', '/');
         string text = $"""
             node = "{Cluster.Scope}"
             orders = "{orders}"
@@ -67,7 +67,7 @@ public sealed class FailedMessageSurfaceTest : IDisposable
             sequence = 4
             reason = "audit: refused"
             """;
-        string path = Path.Combine(scratch, "snapshot.xmip");
+        string path = scratch.Inside("snapshot.xmip");
         File.WriteAllText(path, text);
 
         return new SnapshotOperator(path);
@@ -116,7 +116,7 @@ public sealed class FailedMessageSurfaceTest : IDisposable
         Assert.Empty(none.Messages);
 
         FailedMessageList unread = new SnapshotOperator(
-            Path.Combine(scratch, "not-published-yet.xmip")).FailedMessages(Cluster.Scope);
+            scratch.Inside("not-published-yet.xmip")).FailedMessages(Cluster.Scope);
         Assert.False(unread.Listed);
         Assert.False(FailedMessageList.Unlisted.Listed);
     }

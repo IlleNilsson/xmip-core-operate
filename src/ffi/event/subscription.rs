@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn the_process_hub_is_listed_and_acted_on_and_a_stranger_act_is_refused() {
-        let at = file::temporary::Folder::new("operate-subscription");
+        let at = audit_file::temporary::Folder::new("operate-subscription");
         super::super::gate::allowed::policy();
         let cluster = configure::fixture::test_cluster();
         let (scope, node) = (cluster.scope(), cluster.node_scope(0));

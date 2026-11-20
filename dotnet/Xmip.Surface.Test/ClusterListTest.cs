@@ -93,33 +93,27 @@ public sealed class ClusterListTest
     [Fact]
     public void ASurfaceThatHasPublishedNothingYetIsNamedByItsFirstPublication()
     {
-        string area = Directory.CreateTempSubdirectory("xmip-cluster-list-").FullName;
-        string later = Path.Combine(area, "later.xmip");
+        using TestFolder area = new("cluster-list");
+        string later = area.Inside("later.xmip");
 
-        try
-        {
-            using ClusterSurfaces held = ClusterSurfaces.Over(
-                [new SnapshotOperator(later), new SnapshotOperator(Fixture("cluster.xmip"))]);
+        using ClusterSurfaces held = ClusterSurfaces.Over(
+            [new SnapshotOperator(later), new SnapshotOperator(Fixture("cluster.xmip"))]);
 
-            Assert.Equal([string.Empty, Cluster.Name], held.Clusters);
-            Assert.False(held.Publishing(string.Empty));
+        Assert.Equal([string.Empty, Cluster.Name], held.Clusters);
+        Assert.False(held.Publishing(string.Empty));
 
-            File.Copy(Fixture("cluster-cl2.xmip"), later);
+        File.Copy(Fixture("cluster-cl2.xmip"), later);
 
-            Assert.Equal([Second, Cluster.Name], held.Clusters);
-            Assert.True(held.Publishing(Second));
-            Assert.Equal(Second, held.For(Second, includingHidden: false).Run().Cluster);
-        }
-        finally
-        {
-            Directory.Delete(area, recursive: true);
-        }
+        Assert.Equal([Second, Cluster.Name], held.Clusters);
+        Assert.True(held.Publishing(Second));
+        Assert.Equal(Second, held.For(Second, includingHidden: false).Run().Cluster);
     }
 
     [Fact]
     public void TwoSurfacesThatHavePublishedNothingYetAreNotRefused()
     {
-        string area = Path.Combine(Path.GetTempPath(), $"xmip-cluster-list-{Guid.NewGuid():n}");
+        using TestFolder folder = new("cluster-list");
+        string area = folder.Inside("nothing-yet");
 
         using ClusterSurfaces held = ClusterSurfaces.Over(
             [new SnapshotOperator(Path.Combine(area, "a.xmip")),
@@ -131,22 +125,15 @@ public sealed class ClusterListTest
     [Fact]
     public void ALaterNameAnotherClusterHoldsIsNotTakenTwice()
     {
-        string area = Directory.CreateTempSubdirectory("xmip-cluster-list-").FullName;
-        string later = Path.Combine(area, "later.xmip");
+        using TestFolder area = new("cluster-list");
+        string later = area.Inside("later.xmip");
 
-        try
-        {
-            using ClusterSurfaces held = ClusterSurfaces.Over(
-                [new SnapshotOperator(Fixture("cluster.xmip")), new SnapshotOperator(later)]);
+        using ClusterSurfaces held = ClusterSurfaces.Over(
+            [new SnapshotOperator(Fixture("cluster.xmip")), new SnapshotOperator(later)]);
 
-            File.Copy(Fixture("cluster.xmip"), later);
+        File.Copy(Fixture("cluster.xmip"), later);
 
-            Assert.Equal([Cluster.Name, string.Empty], held.Clusters);
-        }
-        finally
-        {
-            Directory.Delete(area, recursive: true);
-        }
+        Assert.Equal([Cluster.Name, string.Empty], held.Clusters);
     }
 
     private static string Fixture(string name)
@@ -163,22 +150,23 @@ public sealed class ClusterListTest
     /// <summary>A host's TOML document in a directory of its own.</summary>
     private sealed class Papers : IDisposable
     {
+        private readonly TestFolder folder = new("cluster-list");
+
         public Papers(string toml)
         {
-            Directory = System.IO.Directory.CreateTempSubdirectory("xmip-cluster-list-").FullName;
-            string file = Path.Combine(Directory, "gui.toml");
+            string file = folder.Inside("gui.toml");
             File.WriteAllText(file, toml);
             Configuration = TomlDocument.Read(file);
         }
 
-        public string Directory { get; }
+        public string Directory => folder.Path;
 
         public IConfigurationRoot Configuration { get; }
 
         public void Dispose()
         {
             (Configuration as IDisposable)?.Dispose();
-            System.IO.Directory.Delete(Directory, recursive: true);
+            folder.Dispose();
         }
     }
 }

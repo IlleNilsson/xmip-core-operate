@@ -8,13 +8,12 @@ namespace Xmip.Surface.Test;
 /// </summary>
 public sealed class ClusterConfigurationTest : IDisposable
 {
-    private readonly string _directory =
-        Directory.CreateTempSubdirectory("xmip-cluster-configuration-").FullName;
+    private readonly TestFolder _directory = new("cluster-configuration");
 
     [Fact]
     public void ItOpensOnTheClusterItsNodesAndEveryArtifactKind()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
 
         Assert.Equal(Estate.Cluster.Name, cluster.Name);
         Assert.Equal(Estate.Cluster.Nodes.Take(2), cluster.Nodes);
@@ -35,7 +34,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void AnEntryIsOfferedWhatItMayBeSetAndAPartyAnIdentity()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         ArtifactEntry location = cluster.Views.Of("receive-location")!.Entries[0];
 
         Assert.Contains(location.Offered, offered => offered.Key == "prepare");
@@ -63,7 +62,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void AValueIsEditedInPlaceAndTheRestIsKept()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         ArtifactEntry location = cluster.Views.Of("receive-location")!.Entries[0];
 
         Assert.True(
@@ -83,7 +82,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void EntriesAndNodesAreAddedAndRemovedThroughTheRuntime()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         ArtifactView sends = cluster.Views.Of("send-location")!;
         ArtifactPlace place = sends.Places.First(at => at.Scope == "cluster");
 
@@ -116,7 +115,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void AnEditTheRuntimeRefusesLeavesTheTextAndSaysWhy()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string before = cluster.Text;
 
         ClusterEdit twice = new ClusterEdit.AddNode(Estate.Cluster.Nodes[0]);
@@ -133,7 +132,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void ANodesOwnDocumentIsNeverOfferedForEditing()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         Assert.True(NodeSlice.TrySlice(
             cluster.Text,
             Estate.Cluster.Nodes[0],
@@ -141,7 +140,7 @@ public sealed class ClusterConfigurationTest : IDisposable
             out string why),
             why);
 
-        string node = Path.Combine(_directory, "node.xmip");
+        string node = _directory.Inside("node.xmip");
         File.WriteAllText(node, slices[0].Text);
         ClusterConfiguration opened = ClusterConfiguration.Open(node);
 
@@ -155,7 +154,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     public void AClusterBegunHereIsEditableAndBecomesOneWhenItDeclaresANode()
     {
         ClusterConfiguration cluster =
-            ClusterConfiguration.Open(Path.Combine(_directory, "new.xmip"));
+            ClusterConfiguration.Open(_directory.Inside("new.xmip"));
 
         Assert.False(cluster.Exists);
         Assert.True(cluster.Editable, cluster.Refusal);
@@ -178,7 +177,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void ASaveRefusesAFileAnotherEditorChangedAndOverwritesNothing()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         Assert.True(cluster.TryEdit(
             new ClusterEdit.Set(["service"], ["name"], "\"mine\""), out string edit), edit);
         string theirs = File.ReadAllText(cluster.Path) + "# saved by another editor\n";
@@ -201,7 +200,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void AByteOrderMarkAnEditorLeftIsNotPartOfTheText()
     {
-        string path = Path.Combine(_directory, "marked.xmip");
+        string path = _directory.Inside("marked.xmip");
         File.WriteAllText(path, "# café\n", new System.Text.UTF8Encoding(true));
 
         Assert.Equal("# café\n", ClusterConfiguration.Open(path).Text);
@@ -211,7 +210,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     public void AFileThatAppearedSinceAnEmptyOpenIsNotOverwritten()
     {
         ClusterConfiguration cluster =
-            ClusterConfiguration.Open(Path.Combine(_directory, "new.xmip"));
+            ClusterConfiguration.Open(_directory.Inside("new.xmip"));
         Assert.True(cluster.TryEdit(
             new ClusterEdit.AddNode(Estate.Cluster.Nodes[0]), out string edit), edit);
         File.WriteAllText(cluster.Path, "# written elsewhere\n");
@@ -223,7 +222,7 @@ public sealed class ClusterConfigurationTest : IDisposable
     [Fact]
     public void ASaveLeavesNoTemporaryFileAndSavesAgainAfterItself()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
 
         for (int save = 0; save < 2; save++)
         {
@@ -232,14 +231,15 @@ public sealed class ClusterConfigurationTest : IDisposable
             Assert.True(cluster.TryWrite(out string stale), stale);
         }
 
-        Assert.Equal(["cluster.xmip"], Directory.GetFiles(_directory).Select(Path.GetFileName));
+        Assert.Equal(
+            ["cluster.xmip"], Directory.GetFiles(_directory.Path).Select(Path.GetFileName));
         Assert.Contains("save-1", File.ReadAllText(cluster.Path), StringComparison.Ordinal);
     }
 
     [Fact]
     public async Task OfTwoConcurrentSavesExactlyOneLandsAndTheOtherIsRefused()
     {
-        string path = Estate.Written(_directory).Path;
+        string path = Estate.Written(_directory.Path).Path;
 
         for (int round = 0; round < 40; round++)
         {
@@ -273,13 +273,14 @@ public sealed class ClusterConfigurationTest : IDisposable
             Assert.Equal(winner.Text, File.ReadAllText(path));
         }
 
-        Assert.Equal(["cluster.xmip"], Directory.GetFiles(_directory).Select(Path.GetFileName));
+        Assert.Equal(
+            ["cluster.xmip"], Directory.GetFiles(_directory.Path).Select(Path.GetFileName));
     }
 
     [Fact]
     public void ASaveIsRefusedInWordsWhileAnotherSaveHoldsTheFile()
     {
-        ClusterConfiguration cluster = Estate.Written(_directory);
+        ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string before = File.ReadAllText(cluster.Path);
         Assert.True(cluster.TryEdit(
             new ClusterEdit.Set(["service"], ["name"], "\"mine\""), out string edit), edit);
@@ -301,6 +302,6 @@ public sealed class ClusterConfigurationTest : IDisposable
 
     public void Dispose()
     {
-        Directory.Delete(_directory, recursive: true);
+        _directory.Dispose();
     }
 }

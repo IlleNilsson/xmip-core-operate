@@ -20,36 +20,29 @@ public sealed class RuntimeSecureSurfaceTest
     [Fact]
     public void AHostIssuedUnderAKeptAuthorityIsListenedOnAndStopped()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-host-").FullName;
+        using TestFolder place = new("operate-host");
 
-        try
-        {
-            string authority = Path.Combine(place, "authority");
-            Assert.True(
-                Hosting.Issue(authority, "test", "127.0.0.1", place, out SecureSurfaceIssued issued,
-                    out string refused),
-                refused);
-            using X509Certificate2 leaf =
-                X509CertificateLoader.LoadCertificateFromFile(issued.Certificate);
-            Assert.Equal("CN=127.0.0.1", leaf.Subject);
-            Assert.Equal(Path.Combine(authority, "authority.pem"), issued.Anchor);
+        string authority = place.Inside("authority");
+        Assert.True(
+            Hosting.Issue(authority, "test", "127.0.0.1", place.Path,
+                out SecureSurfaceIssued issued, out string refused),
+            refused);
+        using X509Certificate2 leaf =
+            X509CertificateLoader.LoadCertificateFromFile(issued.Certificate);
+        Assert.Equal("CN=127.0.0.1", leaf.Subject);
+        Assert.Equal(Path.Combine(authority, "authority.pem"), issued.Anchor);
 
-            using SecureSurfaceListener? listener = Hosting.Open(
-                Protection.Tls, "127.0.0.1:0", File.ReadAllText(issued.Certificate),
-                File.ReadAllText(issued.Key), File.ReadAllText(issued.Anchor), out string reason);
-            Assert.NotNull(listener);
-            Assert.StartsWith("127.0.0.1:", listener.Address, StringComparison.Ordinal);
-            listener.Stop();
-            Assert.True(listener.Accept() is SecureSurfaceAccepted.Stopped, reason);
+        using SecureSurfaceListener? listener = Hosting.Open(
+            Protection.Tls, "127.0.0.1:0", File.ReadAllText(issued.Certificate),
+            File.ReadAllText(issued.Key), File.ReadAllText(issued.Anchor), out string reason);
+        Assert.NotNull(listener);
+        Assert.StartsWith("127.0.0.1:", listener.Address, StringComparison.Ordinal);
+        listener.Stop();
+        Assert.True(listener.Accept() is SecureSurfaceAccepted.Stopped, reason);
 
-            Assert.False(Hosting.Issue(authority, "test", " ", place, out _, out refused));
-            Assert.Contains("host", refused, StringComparison.Ordinal);
-            Assert.Null(Hosting.Open((Protection)7, "127.0.0.1:0", "", "", "", out reason));
-            Assert.Contains("no protection 7", reason, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        Assert.False(Hosting.Issue(authority, "test", " ", place.Path, out _, out refused));
+        Assert.Contains("host", refused, StringComparison.Ordinal);
+        Assert.Null(Hosting.Open((Protection)7, "127.0.0.1:0", "", "", "", out reason));
+        Assert.Contains("no protection 7", reason, StringComparison.Ordinal);
     }
 }

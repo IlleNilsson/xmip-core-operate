@@ -112,6 +112,10 @@ configure = { package = "xmip-core-configure", git = "https://github.com/IlleNil
 # A folder of a test's own (`file::temporary::Folder`; ADR-0021, amendment
 # 2026-11-19).
 file = { package = "xmip-core-library-file", git = "https://github.com/IlleNilsson/xmip-core-library-file", branch = "main", features = ["test-support"] }
+# The folder of a test whose Event subscriptions audit in it, removed once
+# audit's keeper kept their records (`audit_file::temporary`; ADR-0065,
+# amendment 2026-11-20).
+audit-file = { package = "xmip-core-audit-file", git = "https://github.com/IlleNilsson/xmip-core-audit-file", branch = "main", features = ["test-support"] }
 # The wide string a test of a pinned library names it to Windows by
 # (`codec::wide`), in a remote build too.
 codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main" }

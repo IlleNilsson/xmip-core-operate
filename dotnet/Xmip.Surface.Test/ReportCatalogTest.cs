@@ -15,14 +15,13 @@ public sealed class ReportCatalogTest : IDisposable
 {
     private static readonly TestCluster Cluster = TestCluster.Read();
 
-    private readonly string _directory =
-        Directory.CreateTempSubdirectory("xmip-surface-report-").FullName;
+    private readonly TestFolder _directory = new("surface-report");
 
-    private ProgramAudit Audit => new("Xmip.Surface.Test", _directory);
+    private ProgramAudit Audit => new("Xmip.Surface.Test", _directory.Path);
 
     public void Dispose()
     {
-        Directory.Delete(_directory, recursive: true);
+        _directory.Dispose();
     }
 
     [Fact]

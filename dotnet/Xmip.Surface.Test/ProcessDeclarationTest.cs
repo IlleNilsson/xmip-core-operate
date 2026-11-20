@@ -40,6 +40,7 @@ public sealed class ProcessDeclarationTest
     [Fact]
     public void ALeftDeclarationIsTakenAwayByTheRuntimeAndAStrangerIsKept()
     {
+        using TestFolder folder = new("surface-stranger");
         ProcessDeclaration? declared = ProcessDeclaration.Declare(
             "xmip-surface-test", string.Empty, "test");
 
@@ -48,18 +49,11 @@ public sealed class ProcessDeclarationTest
         Assert.False(File.Exists(declared.File), "taken away by the runtime");
         Assert.Equal(Abi.Module.XmipStatus.Ok, ProcessDeclaration.Undeclare(declared.File));
 
-        string stranger = Path.Combine(Path.GetTempPath(), $"other-{Environment.ProcessId}.toml");
+        string stranger = folder.Inside("other.toml");
         File.WriteAllText(stranger, "kept");
 
-        try
-        {
-            Assert.Equal(Abi.Module.XmipStatus.Invalid, ProcessDeclaration.Undeclare(stranger));
-            Assert.True(File.Exists(stranger), "no declaration's file, so not removed");
-        }
-        finally
-        {
-            File.Delete(stranger);
-        }
+        Assert.Equal(Abi.Module.XmipStatus.Invalid, ProcessDeclaration.Undeclare(stranger));
+        Assert.True(File.Exists(stranger), "no declaration's file, so not removed");
     }
 
     [Fact]

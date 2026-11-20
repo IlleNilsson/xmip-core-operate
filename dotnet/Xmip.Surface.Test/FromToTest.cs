@@ -19,9 +19,9 @@ public sealed class FromToTest
 
     // A node that receives at In, routes by onward to the Send Port Out, and
     // draws both, as a running node publishes itself.
-    private static string Written()
+    private static string Written(TestFolder folder)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"xmip-from-to-{Guid.NewGuid():N}.xmip");
+        string path = folder.Inside("from-to.xmip");
         File.WriteAllText(path, $$"""
             node = "{{Cluster}}"
 
@@ -63,8 +63,8 @@ public sealed class FromToTest
     [Fact]
     public void ARowAndWhatIsBeneathItSayFromAndToInTheRuntimesWords()
     {
-        string path = Written();
-        IOperatorSurface surface = new SnapshotOperator(path);
+        using TestFolder folder = new("from-to");
+        IOperatorSurface surface = new SnapshotOperator(Written(folder));
 
         FromTo location = surface.FromTo($"{Node}/receive/In");
         Assert.Equal($"In [{Processor}]", location.From);
@@ -77,14 +77,13 @@ public sealed class FromToTest
         Assert.Equal(
             ["Out"],
             Assert.Single(surface.Subscriptions().Subscriptions).Reaches);
-        File.Delete(path);
     }
 
     [Fact]
     public void AStageSegmentReadsAsItsTitleOnEverySurfaceThatShowsIt()
     {
-        string path = Written();
-        IOperatorSurface surface = new SnapshotOperator(path);
+        using TestFolder folder = new("from-to");
+        IOperatorSurface surface = new SnapshotOperator(Written(folder));
         ScopeIndex index = surface.Index();
 
         Assert.Equal("Work Process", index.Label($"{Node}/process"));
@@ -95,13 +94,13 @@ public sealed class FromToTest
             ScopeTree.Trail($"{Node}/process/onward", Cluster, index)
                 .Skip(3)
                 .Select(crumb => crumb.Label));
-        File.Delete(path);
     }
 
     [Fact]
     public void TheWorkProcessCardSaysNoneIsPlacedWhileOnlySubscriptionsAreThere()
     {
-        string path = Written();
+        using TestFolder folder = new("from-to");
+        string path = Written(folder);
         IOperatorSurface surface = new SnapshotOperator(path);
 
         Assert.True(surface.NoWorkProcessPlaced("process"));
@@ -117,6 +116,5 @@ public sealed class FromToTest
         Assert.False(
             again.NoWorkProcessPlaced("process"),
             "something beneath the stage that no Subscription is: a Work Process");
-        File.Delete(path);
     }
 }

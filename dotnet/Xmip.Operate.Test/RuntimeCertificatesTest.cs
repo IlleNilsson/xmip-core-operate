@@ -22,54 +22,40 @@ public sealed class RuntimeCertificatesTest
     [Fact]
     public void ARequestIsWrittenForAPersonAndANameThatIsNoneIsRefused()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-request-").FullName;
+        using TestFolder place = new("operate-request");
 
-        try
-        {
-            string folder = Path.Combine(place, "phone");
-            Assert.True(
-                Certificates.Request(Person, folder, out string key, out string request, out _));
-            Assert.Equal(Path.Combine(folder, "operator.key"), key);
-            Assert.Contains("PRIVATE KEY", File.ReadAllText(key), StringComparison.Ordinal);
-            Assert.Contains(
-                "CERTIFICATE REQUEST", File.ReadAllText(request), StringComparison.Ordinal);
+        string folder = place.Inside("phone");
+        Assert.True(
+            Certificates.Request(Person, folder, out string key, out string request, out _));
+        Assert.Equal(Path.Combine(folder, "operator.key"), key);
+        Assert.Contains("PRIVATE KEY", File.ReadAllText(key), StringComparison.Ordinal);
+        Assert.Contains(
+            "CERTIFICATE REQUEST", File.ReadAllText(request), StringComparison.Ordinal);
 
-            Assert.False(Certificates.Request(Person, folder, out _, out _, out string there));
-            Assert.Contains("nothing is overwritten", there, StringComparison.Ordinal);
+        Assert.False(Certificates.Request(Person, folder, out _, out _, out string there));
+        Assert.Contains("nothing is overwritten", there, StringComparison.Ordinal);
 
-            string other = Path.Combine(place, "other");
-            Assert.False(
-                Certificates.Request("CN=alice", other, out _, out _, out string refused));
-            Assert.Contains("person", refused, StringComparison.Ordinal);
-            Assert.False(Directory.Exists(other) && Directory.EnumerateFiles(other).Any());
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        string other = place.Inside("other");
+        Assert.False(
+            Certificates.Request("CN=alice", other, out _, out _, out string refused));
+        Assert.Contains("person", refused, StringComparison.Ordinal);
+        Assert.False(Directory.Exists(other) && Directory.EnumerateFiles(other).Any());
     }
 
     [Fact]
     public void AChainIsKeptWholeReplacedWhereAskedAndElseNeverOverAFile()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-keep-").FullName;
+        using TestFolder place = new("operate-keep");
 
-        try
-        {
-            string chain = Path.Combine(place, "phone", "operator.pem");
-            Assert.True(Certificates.Keep(chain, "first", false, out string refused), refused);
-            Assert.False(Certificates.Keep(chain, "over", false, out refused));
-            Assert.Contains("nothing is overwritten", refused, StringComparison.Ordinal);
-            Assert.Equal("first", File.ReadAllText(chain));
+        string chain = Path.Combine(place.Path, "phone", "operator.pem");
+        Assert.True(Certificates.Keep(chain, "first", false, out string refused), refused);
+        Assert.False(Certificates.Keep(chain, "over", false, out refused));
+        Assert.Contains("nothing is overwritten", refused, StringComparison.Ordinal);
+        Assert.Equal("first", File.ReadAllText(chain));
 
-            Assert.True(Certificates.Keep(chain, "renewed", true, out refused), refused);
-            Assert.Equal("renewed", File.ReadAllText(chain));
-            Assert.Single(Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(chain)!));
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        Assert.True(Certificates.Keep(chain, "renewed", true, out refused), refused);
+        Assert.Equal("renewed", File.ReadAllText(chain));
+        Assert.Single(Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(chain)!));
     }
 
     [Fact]
@@ -105,129 +91,101 @@ public sealed class RuntimeCertificatesTest
     [Fact]
     public void ARequestIsSignedForClientAuthenticationAloneByTheAuthorityTheTableNames()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-certificate-").FullName;
+        using TestFolder place = new("operate-certificate");
 
-        try
-        {
-            string configuration = Authority(place);
-            Assert.True(Certificates.Request(
-                Person, Path.Combine(place, "phone"), out _, out string written, out _));
-            string request = File.ReadAllText(written);
+        string configuration = Authority(place.Path);
+        Assert.True(Certificates.Request(
+            Person, place.Inside("phone"), out _, out string written, out _));
+        string request = File.ReadAllText(written);
 
-            Assert.True(
-                Certificates.Sign(configuration, request, out string chain, out string refused),
-                refused);
+        Assert.True(
+            Certificates.Sign(configuration, request, out string chain, out string refused),
+            refused);
 
-            using X509Certificate2 leaf = X509Certificate2.CreateFromPem(chain);
-            Assert.Equal($"CN={Person}", leaf.Subject);
-            Assert.Equal("CN=test cluster authority", leaf.Issuer);
-            X509EnhancedKeyUsageExtension usage =
-                leaf.Extensions.OfType<X509EnhancedKeyUsageExtension>().Single();
-            Assert.Equal(
-                ["1.3.6.1.5.5.7.3.2"],
-                usage.EnhancedKeyUsages.Cast<Oid>().Select(oid => oid.Value));
+        using X509Certificate2 leaf = X509Certificate2.CreateFromPem(chain);
+        Assert.Equal($"CN={Person}", leaf.Subject);
+        Assert.Equal("CN=test cluster authority", leaf.Issuer);
+        X509EnhancedKeyUsageExtension usage =
+            leaf.Extensions.OfType<X509EnhancedKeyUsageExtension>().Single();
+        Assert.Equal(
+            ["1.3.6.1.5.5.7.3.2"],
+            usage.EnhancedKeyUsages.Cast<Oid>().Select(oid => oid.Value));
 
-            Assert.False(Certificates.Sign(configuration, "no request", out _, out refused));
-            Assert.Contains("CERTIFICATE REQUEST", refused, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        Assert.False(Certificates.Sign(configuration, "no request", out _, out refused));
+        Assert.Contains("CERTIFICATE REQUEST", refused, StringComparison.Ordinal);
     }
 
     [Fact]
     public void ANodeIsIssuedForItsNamesWithItsAnchorsAndAnUnnamedOneIsRefused()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-node-").FullName;
+        using TestFolder place = new("operate-node");
 
-        try
-        {
-            string authority = Path.Combine(place, "authority");
-            string folder = Path.Combine(place, "identity", "node");
-            Assert.True(
-                Certificates.Issue(
-                    authority, "test cluster authority", "node", ["node.example"], folder,
-                    out NodeIssued issued, out string refused),
-                refused);
-            Assert.Equal(Path.Combine(folder, "node.pem"), issued.Certificate);
-            Assert.Equal(Path.Combine(folder, "anchors.pem"), issued.Anchors);
+        string authority = place.Inside("authority");
+        string folder = Path.Combine(place.Path, "identity", "node");
+        Assert.True(
+            Certificates.Issue(
+                authority, "test cluster authority", "node", ["node.example"], folder,
+                out NodeIssued issued, out string refused),
+            refused);
+        Assert.Equal(Path.Combine(folder, "node.pem"), issued.Certificate);
+        Assert.Equal(Path.Combine(folder, "anchors.pem"), issued.Anchors);
 
-            using X509Certificate2 leaf = X509Certificate2.CreateFromPemFile(
-                issued.Certificate, issued.Key);
-            Assert.Equal("CN=node", leaf.Subject);
-            string named = leaf.Extensions.OfType<X509SubjectAlternativeNameExtension>()
-                .Single().EnumerateDnsNames().Aggregate(string.Empty, (all, one) => all + one);
-            Assert.Contains("node.example", named, StringComparison.Ordinal);
-            Assert.Equal(
-                File.ReadAllText(Path.Combine(authority, "authority.pem")),
-                File.ReadAllText(issued.Anchors));
+        using X509Certificate2 leaf = X509Certificate2.CreateFromPemFile(
+            issued.Certificate, issued.Key);
+        Assert.Equal("CN=node", leaf.Subject);
+        string named = leaf.Extensions.OfType<X509SubjectAlternativeNameExtension>()
+            .Single().EnumerateDnsNames().Aggregate(string.Empty, (all, one) => all + one);
+        Assert.Contains("node.example", named, StringComparison.Ordinal);
+        Assert.Equal(
+            File.ReadAllText(Path.Combine(authority, "authority.pem")),
+            File.ReadAllText(issued.Anchors));
 
-            Assert.False(Certificates.Issue(
-                authority, "test cluster authority", " ", [], folder, out _, out string none));
-            Assert.Contains("node", none, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        Assert.False(Certificates.Issue(
+            authority, "test cluster authority", " ", [], folder, out _, out string none));
+        Assert.Contains("node", none, StringComparison.Ordinal);
     }
 
     [Fact]
     public void AnActOnTheAuthorityCrossesAsJsonAndAnActThatIsNoneIsRefused()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-authority-").FullName;
+        using TestFolder place = new("operate-authority");
 
-        try
-        {
-            string authority = Path.Combine(place, "authority");
-            string arguments = System.Text.Json.JsonSerializer.Serialize(
-                new Dictionary<string, string>
-                {
-                    ["authority"] = authority,
-                    ["name"] = "test cluster authority",
-                });
-            Assert.True(
-                Certificates.Authority("set-up", arguments, out string answer, out string refused),
-                refused);
-            using System.Text.Json.JsonDocument read = System.Text.Json.JsonDocument.Parse(answer);
-            Assert.Equal(
-                "test cluster authority", read.RootElement.GetProperty("subject").GetString());
+        string authority = place.Inside("authority");
+        string arguments = System.Text.Json.JsonSerializer.Serialize(
+            new Dictionary<string, string>
+            {
+                ["authority"] = authority,
+                ["name"] = "test cluster authority",
+            });
+        Assert.True(
+            Certificates.Authority("set-up", arguments, out string answer, out string refused),
+            refused);
+        using System.Text.Json.JsonDocument read = System.Text.Json.JsonDocument.Parse(answer);
+        Assert.Equal(
+            "test cluster authority", read.RootElement.GetProperty("subject").GetString());
 
-            Assert.False(Certificates.Authority("rotate", "{}", out _, out string none));
-            Assert.Contains("no act", none, StringComparison.Ordinal);
-            Assert.False(Certificates.Authority("inspect", "not json", out _, out string bad));
-            Assert.Contains("JSON", bad, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        Assert.False(Certificates.Authority("rotate", "{}", out _, out string none));
+        Assert.Contains("no act", none, StringComparison.Ordinal);
+        Assert.False(Certificates.Authority("inspect", "not json", out _, out string bad));
+        Assert.Contains("JSON", bad, StringComparison.Ordinal);
     }
 
     [Fact]
     public void AHandEditedOperatorConfigurationIsRefusedThroughTheAbi()
     {
-        string place = Directory.CreateTempSubdirectory("xmip-operate-edited-").FullName;
+        using TestFolder place = new("operate-edited");
 
-        try
-        {
-            string configuration = Authority(place);
-            Assert.True(Certificates.Request(
-                Person, Path.Combine(place, "phone"), out _, out string written, out _));
-            File.WriteAllText(
-                configuration,
-                File.ReadAllText(configuration).Replace(
-                    "lifetime = \"1h\"", "lifetime = \"876000h\"", StringComparison.Ordinal));
+        string configuration = Authority(place.Path);
+        Assert.True(Certificates.Request(
+            Person, place.Inside("phone"), out _, out string written, out _));
+        File.WriteAllText(
+            configuration,
+            File.ReadAllText(configuration).Replace(
+                "lifetime = \"1h\"", "lifetime = \"876000h\"", StringComparison.Ordinal));
 
-            Assert.False(Certificates.Sign(
-                configuration, File.ReadAllText(written), out _, out string refused));
-            Assert.Contains("changed after it was signed", refused, StringComparison.Ordinal);
-        }
-        finally
-        {
-            Directory.Delete(place, recursive: true);
-        }
+        Assert.False(Certificates.Sign(
+            configuration, File.ReadAllText(written), out _, out string refused));
+        Assert.Contains("changed after it was signed", refused, StringComparison.Ordinal);
     }
 
     // An authority made here, kept as the runtime reads one, and a node's

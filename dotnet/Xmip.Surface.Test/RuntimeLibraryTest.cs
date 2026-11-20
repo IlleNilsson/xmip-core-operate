@@ -8,10 +8,19 @@ namespace Xmip.Surface.Test;
 /// amendment 2026-11-17: a surface's document no longer names it, since the
 /// runtime reads the document).
 /// </summary>
-public sealed class RuntimeLibraryTest
+public sealed class RuntimeLibraryTest : IDisposable
 {
-    private static readonly string Base = Path.Combine(Path.GetTempPath(), "xmip-surface-test");
-    private static readonly string Beside = Path.Combine(Path.GetTempPath(), "xmip-surface-exe");
+    // Names alone: nothing is made at either.
+    private readonly TestFolder folder = new("surface-test");
+
+    private string Base => folder.Inside("base");
+
+    private string Beside => folder.Inside("exe");
+
+    public void Dispose()
+    {
+        folder.Dispose();
+    }
 
     [Fact]
     public void TheEnvironmentIsFirst()
