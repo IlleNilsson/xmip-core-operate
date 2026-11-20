@@ -104,21 +104,40 @@ public sealed class RuntimeDesign
 
     /// <summary><paramref name="node"/>'s document sliced from the cluster's
     /// file <paramref name="cluster"/>, kept at <paramref name="clusterPath"/>,
-    /// and signed by the cluster's authority beside that file — made there
-    /// where none is kept — as <c>{"text","authority"}</c>: the file the node
-    /// is given and the certificate it checks it by. False, with the refusal,
-    /// as <see cref="TrySlices"/>, or where the authority cannot be kept.</summary>
-    public bool TrySignedSlice(string cluster, string clusterPath, string node, out string answer)
+    /// as the cluster <paramref name="name"/> where the environment names it,
+    /// and signed by the cluster's authority kept in
+    /// <paramref name="authority"/>, or beside that file where it names none
+    /// — made there where none is kept — as <c>{"text","authority"}</c>: the
+    /// file the node is given and the certificate it checks it by. False,
+    /// with the refusal, as <see cref="TrySlices"/>, or where the authority
+    /// cannot be kept.</summary>
+    public bool TrySignedSlice(
+        string cluster,
+        string clusterPath,
+        string node,
+        string? name,
+        string? authority,
+        out string answer)
     {
         ArgumentNullException.ThrowIfNull(clusterPath);
         ArgumentNullException.ThrowIfNull(node);
 
-        string argument = new System.Text.Json.Nodes.JsonObject
+        System.Text.Json.Nodes.JsonObject argument = new()
         {
             ["cluster"] = clusterPath,
             ["node"] = node,
-        }.ToJsonString();
-        return Call(_signed, cluster, argument, out answer);
+        };
+        if (name is not null)
+        {
+            argument["name"] = name;
+        }
+
+        if (authority is not null)
+        {
+            argument["authority"] = authority;
+        }
+
+        return Call(_signed, cluster, argument.ToJsonString(), out answer);
     }
 
     // Section 27's exports take this shape too (RuntimeDocuments).

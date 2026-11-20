@@ -414,12 +414,12 @@ mod tests {
         (scope, cluster.node(0).name.clone())
     }
 
-    /// A temporary audit directory of this test's own.
-    fn directory(name: &str) -> String {
-        let name = format!("xmip-runtime-event-{name}-{}", std::process::id());
-        let at = std::env::temp_dir().join(name);
-        let _ = std::fs::remove_dir_all(&at);
-        at.to_string_lossy().into_owned()
+    /// A temporary audit directory of this test's own, and where it is as
+    /// the boundary is handed it.
+    fn directory(name: &str) -> (file::temporary::Folder, String) {
+        let folder = file::temporary::Folder::new(&format!("operate-event-{name}"));
+        let at = folder.to_string_lossy().into_owned();
+        (folder, at)
     }
 
     fn subscribe(directory: &str, filter: &EventFilter) -> *mut Handle {
@@ -454,7 +454,7 @@ mod tests {
         // over names a Party: the subscriber is the account this process
         // runs as, proven by the operating system's word and resolved
         // through the Parties of the node serving here.
-        let at = directory("proven");
+        let (_audit, at) = directory("proven");
         let (cluster, _) = apart("proven");
         let filter = EventFilter {
             types: core::ptr::null(),
@@ -503,7 +503,6 @@ mod tests {
         for said in ["event.subscribe", "peer-credentials", "nobody-holds-this"] {
             assert!(kept.contains(said), "{said} in {kept}");
         }
-        let _ = std::fs::remove_dir_all(&at);
     }
 
     fn raised(scope: &str, diagnostics: &[Str]) -> Wire {
@@ -561,7 +560,7 @@ mod tests {
 
     #[test]
     fn a_subscriber_drains_what_it_matches_and_frees_it() {
-        let at = directory("drain");
+        let (_audit, at) = directory("drain");
         let (cluster, node) = apart("drain");
         let scope = format!("{cluster}/node/{node}/receive/orders");
         let scope = scope.as_str();
@@ -605,7 +604,7 @@ mod tests {
         let audit = std::fs::read_to_string(&file).expect("kept");
         assert!(audit.contains("action = \"event.deliver\""), "{audit}");
         assert!(audit.contains("action = \"event.unsubscribe\""), "{audit}");
-        std::fs::remove_dir_all(&at).expect("nothing holds the audit open");
+        std::fs::remove_file(&file).expect("nothing holds the audit open");
     }
 
     extern "C" fn told(context: *mut c_void, event: *const Wire) {
@@ -621,7 +620,7 @@ mod tests {
     #[test]
     fn a_listener_is_called_back_with_each_event() {
         super::super::gate::allowed::policy();
-        let at = directory("listen");
+        let (_audit, at) = directory("listen");
         let (cluster, node) = apart("listen");
         let (tell, heard) = mpsc::channel();
         let tell = Box::new(Mutex::new(tell));
@@ -662,7 +661,6 @@ mod tests {
         // SAFETY: the handle is live and unsubscribed once.
         unsafe { xmip_event_unsubscribe_v1(out) };
         drop(tell);
-        let _ = std::fs::remove_dir_all(&at);
     }
 
     #[test]

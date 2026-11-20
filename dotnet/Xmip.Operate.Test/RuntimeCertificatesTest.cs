@@ -205,11 +205,39 @@ public sealed class RuntimeCertificatesTest
         }
     }
 
+    [Fact]
+    public void AHandEditedOperatorConfigurationIsRefusedThroughTheAbi()
+    {
+        string place = Directory.CreateTempSubdirectory("xmip-operate-edited-").FullName;
+
+        try
+        {
+            string configuration = Authority(place);
+            Assert.True(Certificates.Request(
+                Person, Path.Combine(place, "phone"), out _, out string written, out _));
+            File.WriteAllText(
+                configuration,
+                File.ReadAllText(configuration).Replace(
+                    "lifetime = \"1h\"", "lifetime = \"876000h\"", StringComparison.Ordinal));
+
+            Assert.False(Certificates.Sign(
+                configuration, File.ReadAllText(written), out _, out string refused));
+            Assert.Contains("changed after it was signed", refused, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(place, recursive: true);
+        }
+    }
+
     // An authority made here, kept as the runtime reads one, and a node's
-    // configuration naming it in [provision.operator]; its path.
+    // slice declaring it in [provision.operator], signed by it through
+    // xmip_cluster_signed_slice_v1 in a configuration folder of its own;
+    // the slice's path.
     internal static string Authority(string place)
     {
-        string kept = Directory.CreateDirectory(Path.Combine(place, "authority")).FullName;
+        string folder = Directory.CreateDirectory(Path.Combine(place, "config")).FullName;
+        string kept = Directory.CreateDirectory(Path.Combine(folder, "authority")).FullName;
         using ECDsa key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
         CertificateRequest root = new(
             "CN=test cluster authority", key, HashAlgorithmName.SHA256);
@@ -220,11 +248,16 @@ public sealed class RuntimeCertificatesTest
         File.WriteAllText(Path.Combine(kept, "authority.pem"), authority.ExportCertificatePem());
         File.WriteAllText(Path.Combine(kept, "authority.key"), key.ExportPkcs8PrivateKeyPem());
 
-        string configuration = Path.Combine(place, "node.xmip");
-        File.WriteAllText(
-            configuration,
-            "[service]\nname = \"n\"\ncluster_name = \"c\"\nnode_name = \"d\"\n\n"
-                + "[provision.operator]\nauthority = \"authority\"\nlifetime = \"1h\"\n");
+        const string cluster = "[service]\nname = \"n\"\n\n[nodes.d.provision.operator]\n"
+            + "authority = \"authority\"\nlifetime = \"1h\"\n";
+        Assert.True(
+            RuntimeRulesTest.Rules.Design.TrySignedSlice(
+                cluster, Path.Combine(folder, "cluster.xmip"), "d", "c", kept,
+                out string answer),
+            answer);
+        using System.Text.Json.JsonDocument signed = System.Text.Json.JsonDocument.Parse(answer);
+        string configuration = Path.Combine(folder, "node.xmip");
+        File.WriteAllText(configuration, signed.RootElement.GetProperty("text").GetString());
         return configuration;
     }
 }

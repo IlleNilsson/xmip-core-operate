@@ -235,7 +235,9 @@ person's certificate (ADR-0034, amendment 2026-10-15) — is
 key and a request naming the person, which every build carries, the phone's
 remote build too; `Sign` signs a request by the authority a node
 configuration's `[provision.operator]` names, which only a node's build
-carries, refused in words in a remote build. For a key that never leaves
+carries, refused in words in a remote build; the configuration is read as
+its trust admits a slice, so one edited by hand is refused (ADR-0031,
+amendment 2026-11-19). For a key that never leaves
 its platform's keeper, `Information` and `Assemble` are the request's two
 halves around the keeper's signature, every build carrying them, and
 `RuntimeRemotes.OpenKept` (section 17's `xmip_remote_open_kept_v1`) reaches a

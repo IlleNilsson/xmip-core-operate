@@ -44,11 +44,10 @@ xaudit = { package = "xmip-core-audit", git = "https://github.com/IlleNilsson/xm
 # What this library hands audit as the program a .NET program audits
 # through (ffi/audit.rs, program): the file sink, and the operating system's
 # log for when audit cannot persist, the Windows Event Log or the local
-# syslog. Each log's crate is empty off its own platform, so both are linked
-# and each builds where it works.
+# syslog. Each log's crate is empty off its own platform, so each is a
+# dependency of its own platform alone, in the target tables below (ADR-0062,
+# amendment 2026-11-19).
 audit-file = { package = "xmip-core-audit-file", git = "https://github.com/IlleNilsson/xmip-core-audit-file", branch = "main" }
-audit-syslog = { package = "xmip-core-audit-syslog", git = "https://github.com/IlleNilsson/xmip-core-audit-syslog", branch = "main" }
-audit-windows-event-log = { package = "xmip-core-audit-windows-event-log", git = "https://github.com/IlleNilsson/xmip-core-audit-windows-event-log", branch = "main" }
 # Section 11: Events, subscribed from any language: the Event and its
 # filter are the event crate's (ADR-0065). xevent, as xaudit, because the
 # export's own file is ffi/event.rs.
@@ -94,6 +93,13 @@ provision = { package = "xmip-core-provision", git = "https://github.com/IlleNil
 # library to Windows by (`codec::wide`).
 codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main", optional = true }
 
+# The operating system's log of each platform (ffi/audit.rs, program).
+[target.'cfg(windows)'.dependencies]
+audit-windows-event-log = { package = "xmip-core-audit-windows-event-log", git = "https://github.com/IlleNilsson/xmip-core-audit-windows-event-log", branch = "main" }
+
+[target.'cfg(unix)'.dependencies]
+audit-syslog = { package = "xmip-core-audit-syslog", git = "https://github.com/IlleNilsson/xmip-core-audit-syslog", branch = "main" }
+
 [dev-dependencies]
 # The runtime's fixtures, the gates' stand-ins and the test authority
 # (`fixture`), which the exports' tests run a node with. Without the default
@@ -103,6 +109,9 @@ runtime = { package = "xmip-core-runtime", git = "https://github.com/IlleNilsson
 # The test cluster's names, from its `cluster.xmip` (`configure::fixture`;
 # ADR-0056, amendment 2026-10-03): no test writes a cluster or node name.
 configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main", features = ["test-support"] }
+# A folder of a test's own (`file::temporary::Folder`; ADR-0021, amendment
+# 2026-11-19).
+file = { package = "xmip-core-library-file", git = "https://github.com/IlleNilsson/xmip-core-library-file", branch = "main", features = ["test-support"] }
 # The wide string a test of a pinned library names it to Windows by
 # (`codec::wide`), in a remote build too.
 codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main" }

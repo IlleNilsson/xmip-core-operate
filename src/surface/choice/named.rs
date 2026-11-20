@@ -138,9 +138,10 @@ mod tests {
 
     #[test]
     fn files_are_named_together_and_there_unless_a_keeper_keeps_the_key() {
-        let here = std::env::temp_dir().join("xmip-named-certificate.pem");
+        let folder = file::temporary::Folder::new("operate-named");
+        let here = folder.join("certificate.pem");
         std::fs::write(&here, "x").expect("written");
-        let gone = std::env::temp_dir().join("xmip-named-nothing-here.pem");
+        let gone = folder.join("nothing-here.pem");
 
         assert_eq!(
             Named::checked(Some(here.clone()), None, None, false)

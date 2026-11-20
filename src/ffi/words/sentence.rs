@@ -161,10 +161,10 @@ pub unsafe extern "C" fn xmip_figures_line_v1(
             return status::INVALID;
         }
         let mut figures = Figures::none("");
-        for at in 0..6 {
+        for (at, figure) in figures.values.iter_mut().enumerate() {
             // SAFETY: six readable entries each, per the contract.
             let (has, value) = unsafe { (*has.add(at), *values.add(at)) };
-            figures.values[at] = (has != 0).then_some(value);
+            *figure = (has != 0).then_some(value);
         }
         // SAFETY: per the contract above.
         unsafe { written(&english::figures(&figures), out, cap, out_len) }

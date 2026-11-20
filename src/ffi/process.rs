@@ -229,8 +229,7 @@ mod tests {
 
     #[test]
     fn a_process_declares_itself_and_is_listed_with_what_it_said() {
-        let directory = std::env::temp_dir().join("xmip-process-ffi-test");
-        let _ = std::fs::remove_dir_all(&directory);
+        let directory = file::temporary::Folder::new("operate-process-declared");
         let pairs = [borrow("stress"), borrow("calm")];
         let mut buffer = vec![0u8; 4096];
         let mut length = 0usize;
@@ -256,7 +255,6 @@ mod tests {
         assert_eq!(code, status::OK, "{file}");
         let file = PathBuf::from(file);
         let within = directory.join(file.file_name().expect("a file"));
-        std::fs::create_dir_all(&directory).expect("made");
         std::fs::rename(&file, &within).expect("moved where this test reads");
 
         let place = directory.display().to_string();
@@ -297,13 +295,11 @@ mod tests {
         );
         assert_eq!(code, status::OK, "{said}");
         assert!(!within.exists(), "taken away by its holder");
-        std::fs::remove_dir_all(&directory).expect("cleaned");
     }
 
     #[test]
     fn a_file_that_is_no_declarations_is_refused_in_a_sentence_and_kept() {
-        let directory = std::env::temp_dir().join("xmip-process-ffi-refused");
-        std::fs::create_dir_all(&directory).expect("made");
+        let directory = file::temporary::Folder::new("operate-process-refused");
         let kept = directory.join("other-7.toml");
         std::fs::write(&kept, "kept").expect("written");
         let named = kept.display().to_string();
@@ -327,7 +323,6 @@ mod tests {
         assert_eq!(code, status::INVALID);
         assert!(said.starts_with("REFUSED"), "{said}");
         assert!(kept.exists(), "not a declaration's, so not removed");
-        std::fs::remove_dir_all(&directory).expect("cleaned");
     }
 
     #[test]

@@ -313,8 +313,7 @@ mod tests {
 
     #[test]
     fn a_host_certificate_under_a_kept_authority_serves_a_browser_reaching_127_0_0_1() {
-        let base = std::env::temp_dir().join(format!("xmip-ffi-secure-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&base);
+        let base = file::temporary::Folder::new("operate-ffi-secure");
         let authority = base.join("authority").display().to_string();
         let folder = base.display().to_string();
         // SAFETY: every pointer is to live, writable storage of its size.
@@ -410,7 +409,6 @@ mod tests {
         assert_eq!(code, status::CANCELLED);
         // SAFETY: freed once, nothing in flight.
         unsafe { xmip_listener_free_v1(listener) };
-        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]
