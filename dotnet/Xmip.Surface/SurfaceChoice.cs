@@ -229,6 +229,22 @@ public static partial class SurfaceChoice
         return string.IsNullOrWhiteSpace(one) ? [] : [one];
     }
 
+    /// <summary>
+    /// What a host declares it reads while it runs (ADR-0053): each place
+    /// <see cref="Places"/> finds, joined; else the surface word; else the
+    /// root of the scope tree. The one rule the web host and the desktop
+    /// declare by, so the location <c>Get-XmipProcess</c> shows of either
+    /// names what it opened (ADR-0028, amendment 2026-11-21).
+    /// </summary>
+    public static string Declared(IConfiguration configuration)
+    {
+        IReadOnlyList<string> places = Places(configuration);
+
+        return places.Count > 0
+            ? string.Join(", ", places)
+            : configuration[SurfaceKey] ?? ScopeTree.Root;
+    }
+
     // Where one table's surface reads, as its Surface word says; null where
     // the word names no surface or the table no place for it.
     private static string? Place(IConfigurationSection table)
