@@ -36,6 +36,8 @@ public sealed class ClusterListTest
         Assert.True(SurfaceChoice.IsChosen(papers.Configuration));
         Assert.Equal(
             [endpoint, Fixture("cluster.xmip")], SurfaceChoice.Places(papers.Configuration));
+        Assert.Equal(
+            $"{endpoint}, {Fixture("cluster.xmip")}", SurfaceChoice.Declared(papers.Configuration));
 
         using ClusterSurfaces held = SurfaceChoice.OpenAll(papers.Configuration, papers.Directory);
 

@@ -189,6 +189,9 @@ public sealed class ClusterSurfacesTest
             """);
 
         Assert.Equal(["Fixture/cluster.xmip"], SurfaceChoice.Places(one.Configuration));
+        // What a host declares it reads names the snapshot, as both hosts
+        // declare it (ADR-0028, amendment 2026-11-21).
+        Assert.Equal("Fixture/cluster.xmip", SurfaceChoice.Declared(one.Configuration));
 
         using ClusterSurfaces held =
             SurfaceChoice.OpenAll(one.Configuration, AppContext.BaseDirectory);
