@@ -1,4 +1,4 @@
-# A snapshot as a node publishes one: the shape the Essentials writes after
+# A snapshot as a node publishes one: the shape the System Tests write after
 # every tick and the snapshot surface reads. Two nodes; one Done, one
 # Stressed, one Paused, two Fine.
 #

@@ -3,7 +3,7 @@ using Xmip.Abi.Operate;
 namespace Xmip.Surface.Test;
 
 /// <summary>
-/// The drill every surface walks, over an Essentials cluster as a roll
+/// The drill every surface walks, over a System Tests cluster as a roll
 /// publishes one: it starts at the cluster and never above it, each stage has
 /// the figures taken on it and the Locations beneath it, and every row names
 /// the leaf that explains it, so the next step toward the cause is always on

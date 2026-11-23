@@ -51,7 +51,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- A snapshot as a node or the Essentials publishes one, beside the
+    <!-- A snapshot as a node or the System Tests publish one, beside the
          test assembly. -->
     <None Include="Fixture\*.xmip"
           Link="Fixture\%(Filename)%(Extension)"

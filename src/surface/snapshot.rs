@@ -1,4 +1,4 @@
-//! The surface over a published snapshot: what a node — or the Essentials,
+//! The surface over a published snapshot: what a node — or the System Tests,
 //! after every tick — wrote to a file, read once per publication and
 //! answered from that by lookup. A snapshot is a record of what was
 //! published and is never acted on.

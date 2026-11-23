@@ -36,7 +36,7 @@ public sealed class EventSubscriptionSurfaceTest
             + $"state = \"{state}\"\nqueued = {queued}\n";
     }
 
-    // Two declared with a name, as the Essentials' are; the fourth with
+    // Two declared with a name, as the System Tests' are; the fourth with
     // none, as a program that subscribed by identifier alone is.
     private static string Named(int id)
     {

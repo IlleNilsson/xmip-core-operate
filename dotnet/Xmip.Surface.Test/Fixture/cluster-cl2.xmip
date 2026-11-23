@@ -4,7 +4,7 @@
 # what it has to carry is its own [run].cluster, its own scope root and enough
 # topology for a view to draw something that is plainly not CL1's.
 
-source = "essentials — xmip:///CL2"
+source = "System Tests — xmip:///CL2"
 node = "xmip:///CL2"
 
 [[records]]
@@ -52,7 +52,7 @@ stress = "harsh"
 # and every drawn thing's activity, what moved through it per second, too
 # (ADR-0052, amendment 2026-11-10).
 [topology]
-source = "essentials — cluster CL2"
+source = "System Tests — cluster CL2"
 observed_unix_nanos = 1789111688000000000
 
 [[topology.nodes]]

@@ -4,7 +4,7 @@ using Xmip.Operate;
 namespace Xmip.Surface;
 
 /// <summary>
-/// The surface over a published snapshot: what a node — or the Essentials,
+/// The surface over a published snapshot: what a node — or the System Tests,
 /// after every tick — wrote to a file, read once per publication into a
 /// <see cref="ScopeIndex"/> and answered from that by lookup. The path is
 /// given by whoever chose this surface (ADR-0052 clause 3); nothing here
@@ -27,7 +27,7 @@ namespace Xmip.Surface;
 /// runtime's follow reads each publication once as the operating system
 /// tells it the file changed, and every question is answered from that
 /// reading without touching the file. Until 2026-10-03 the page rendered
-/// after each Essentials tick read the 2 MB snapshot itself (867 ms,
+/// after each System Tests tick read the 2 MB snapshot itself (867 ms,
 /// measured 2026-10-02).
 /// </remarks>
 public sealed class SnapshotOperator(string path) : IOperatorSurface, IDisposable

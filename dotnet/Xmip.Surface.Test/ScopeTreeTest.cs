@@ -239,7 +239,7 @@ public sealed class ScopeTreeTest
 
     /// <summary>
     /// A trail starts where the drill does, the cluster by its own name.
-    /// Until 2026-09-26 it began at the root, so an Essentials cluster read
+    /// Until 2026-09-26 it began at the root, so a System Tests cluster read
     /// <c>cluster / &lt;cluster&gt; / …</c> — one cluster, two crumbs, and a
     /// level that held one row. A scope not beneath the top is trailed from
     /// the root.

@@ -402,7 +402,7 @@ mod tests {
         let (first, second) = (&cluster.node(0).name, &cluster.node(1).name);
         format!(
             r#"
-source = "essentials — {scope}"
+source = "System Tests — {scope}"
 node = "{scope}"
 
 [[records]]

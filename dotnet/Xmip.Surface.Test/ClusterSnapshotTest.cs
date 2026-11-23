@@ -4,7 +4,7 @@ using Xmip.Operate;
 namespace Xmip.Surface.Test;
 
 /// <summary>
-/// The snapshot surface over an Essentials cluster as a roll publishes one
+/// The snapshot surface over a System Tests cluster as a roll publishes one
 /// since 2026-09-19: the run says what it was started with, the topology is
 /// cluster, nodes, stages and endpoints with the handoffs between the nodes,
 /// and the nodes' rollup is the record of the branch they hang under.
