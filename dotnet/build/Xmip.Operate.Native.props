@@ -25,8 +25,9 @@
     <XmipRuntimeAndroidX64 Condition="'$(XmipRuntimeAndroidX64)' == ''">$(XmipRuntimeAndroid)/x86_64-linux-android/release/libxmip_core_operate.so</XmipRuntimeAndroidX64>
 
     <!-- iOS: a static library in an xcframework, a device's and the
-         simulator's. Built only on macOS, by the estate's CI for the
-         simulator: not signed, not run (ADR-0014, amendment 2026-10-14). -->
+         simulator's. Built by hand on macOS alone (Build-XmipService
+         -Remote iOS there): not signed, not run (ADR-0014, amendment
+         2026-10-14). -->
     <XmipRuntimeXcframework Condition="'$(XmipRuntimeXcframework)' == ''">$(XmipEstateRoot).ai-interaction/target-ios/xmip_core_operate.xcframework</XmipRuntimeXcframework>
   </PropertyGroup>
 
