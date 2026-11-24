@@ -238,12 +238,14 @@ unsafe fn scope_node(scope: Str, out_node: *mut Str, out_stage: *mut Str) -> i32
 }
 
 /// `observe::capability::declared`, forwarded: the node a capability record
-/// sits beneath, and what its evidence declares or why it is refused.
+/// sits beneath, and what its evidence declares — its roles and its Node
+/// capabilities, these borrowed from `evidence` — or why it is refused.
 ///
 /// # Safety
 /// `scope` and `evidence` point at their stated length of readable bytes;
-/// `roles` has room for `cap` entries and `refusal` for `refusal_cap`
-/// bytes; every other out is writable.
+/// `roles` has room for `cap` entries, `capabilities` for
+/// `capabilities_cap` and `refusal` for `refusal_cap` bytes; every other
+/// out is writable.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn xmip_capability_published_v1(
     scope: Str,
@@ -252,7 +254,9 @@ pub unsafe extern "C" fn xmip_capability_published_v1(
     roles: *mut Str,
     cap: usize,
     out_len: *mut usize,
-    out_online: *mut u8,
+    capabilities: *mut Str,
+    capabilities_cap: usize,
+    capabilities_len: *mut usize,
     refusal: *mut u8,
     refusal_cap: usize,
     refusal_len: *mut usize,
@@ -263,30 +267,22 @@ pub unsafe extern "C" fn xmip_capability_published_v1(
             scope,
             evidence,
             out_node,
-            roles,
-            cap,
-            out_len,
-            out_online,
-            refusal,
-            refusal_cap,
-            refusal_len,
+            (roles, cap, out_len),
+            (capabilities, capabilities_cap, capabilities_len),
+            (refusal, refusal_cap, refusal_len),
         )
     })
 }
 
-/// [`xmip_capability_published_v1`] within its guard.
-#[expect(clippy::too_many_arguments, reason = "the export's own parameters")]
+/// [`xmip_capability_published_v1`] within its guard: each list as its
+/// buffer, its room and where its length is written.
 unsafe fn capability_published(
     scope: Str,
     evidence: Str,
     out_node: *mut Str,
-    roles: *mut Str,
-    cap: usize,
-    out_len: *mut usize,
-    out_online: *mut u8,
-    refusal: *mut u8,
-    refusal_cap: usize,
-    refusal_len: *mut usize,
+    (roles, cap, out_len): (*mut Str, usize, *mut usize),
+    (capabilities, capabilities_cap, capabilities_len): (*mut Str, usize, *mut usize),
+    (refusal, refusal_cap, refusal_len): (*mut u8, usize, *mut usize),
 ) -> i32 {
     // SAFETY: the caller upholds the header's contract on both.
     let (Some(scope), Some(evidence)) = (unsafe { scope_text(scope) }, unsafe {
@@ -301,12 +297,18 @@ unsafe fn capability_published(
     // SAFETY: per the contract above.
     unsafe {
         out_node.write(borrow(node));
-        match node::write_declared(said, roles, cap, out_len, refusal, refusal_cap, refusal_len) {
-            Some(online) => {
-                *out_online = u8::from(online);
-                status::OK
-            }
-            None => status::INVALID,
+        if node::write_declared(said, roles, cap, out_len, refusal, refusal_cap, refusal_len) {
+            let named = ::node::Capability::named_in(evidence);
+            fill(
+                named.into_iter(),
+                capabilities,
+                capabilities_cap,
+                capabilities_len,
+            );
+            status::OK
+        } else {
+            *capabilities_len = 0;
+            status::INVALID
         }
     }
 }
@@ -419,12 +421,14 @@ mod tests {
     #[test]
     fn a_capability_record_crosses_as_observe_reads_it() {
         let evidence = ::node::Capability::of(&[::node::NodeRole::Sending])
-            .with_online(true)
+            .with_declared(&[::node::ONLINE.to_string(), "erp-direct".to_string()])
+            .expect("two Node capabilities")
             .evidence();
         let published = |scope: &str, evidence: &str| {
             let (mut node, mut roles) =
                 (Str::empty(), [Str::empty(); ::node::NodeRole::WORDS.len()]);
-            let (mut len, mut online, mut said_len) = (0usize, 9u8, 0usize);
+            let mut named = [Str::empty(); 4];
+            let (mut len, mut named_len, mut said_len) = (0usize, 9usize, 0usize);
             let mut said = [0u8; 256];
             // SAFETY: every buffer has the capacity passed; every out writable.
             let code = unsafe {
@@ -435,7 +439,9 @@ mod tests {
                     roles.as_mut_ptr(),
                     7,
                     &raw mut len,
-                    &raw mut online,
+                    named.as_mut_ptr(),
+                    named.len(),
+                    &raw mut named_len,
                     said.as_mut_ptr(),
                     said.len(),
                     &raw mut said_len,
@@ -445,8 +451,9 @@ mod tests {
                 .iter()
                 .map(|s| text(*s))
                 .collect();
+            let named: Vec<String> = named[..named_len.min(4)].iter().map(|s| text(*s)).collect();
             let sentence = String::from_utf8(said[..said_len.min(256)].to_vec()).expect("UTF-8");
-            (code, text(node), words, online, sentence)
+            (code, text(node), words, named, sentence)
         };
 
         let cluster = configure::fixture::test_cluster();
@@ -454,13 +461,19 @@ mod tests {
         let at = format!("{}/{sender}", cluster.scope());
         let capability = format!("{at}/capability");
 
-        let (code, node, words, online, said) = published(&capability, &evidence);
-        assert_eq!((code, &node, online), (status::OK, sender, 1));
+        let (code, node, words, named, said) = published(&capability, &evidence);
+        assert_eq!((code, &node), (status::OK, sender));
+        assert_eq!(named, ["online", "erp-direct"], "its Node capabilities");
         assert_eq!((words, said), (vec!["sending".to_string()], String::new()));
 
-        let (code, node, _, _, said) = published(&capability, "declares relay;");
+        let (code, node, _, named, said) = published(&capability, "declares relay;");
         assert_eq!((code, &node), (status::INVALID, sender));
         assert!(said.starts_with("REFUSED"), "{said}");
+        assert_eq!(
+            named,
+            [] as [String; 0],
+            "a refusal names no Node capability"
+        );
 
         assert_eq!(
             published(&format!("{at}/receive"), &evidence).0,

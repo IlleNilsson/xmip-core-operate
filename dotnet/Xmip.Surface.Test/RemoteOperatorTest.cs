@@ -34,7 +34,7 @@ public sealed class RemoteOperatorTest
         Assert.Equal(
             $"RoundTrip · {Cluster.Name} · nodes {receiver}=receiving "
             + $"{processor}=processing+sending {Cluster.WithRole("sending")}=sending · "
-            + $"online {receiver} · realistic",
+            + $"Node capabilities {receiver}=online · realistic",
             remote.Run().Line());
         Assert.Equal(
             ["processing", "sending"], ((IOperatorSurface)remote).Capability(processor).Roles);

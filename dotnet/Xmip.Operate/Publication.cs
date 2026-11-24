@@ -41,7 +41,9 @@ public sealed record Publication(
 /// <param name="Nodes">The nodes spawned.</param>
 /// <param name="Roles">The roles each node was started with, as
 /// <c>node::Capability::entry</c> writes them.</param>
-/// <param name="Online">The nodes that may assume the internet.</param>
+/// <param name="Capabilities">The Node capabilities each node was started
+/// with, as <c>node::Capability::declared_entry</c> writes them,
+/// <c>&lt;node&gt;=online+erp-direct</c> (ADR-0056, amendment 2026-11-24).</param>
 /// <param name="Stress">The stress level's name.</param>
 /// <param name="Hidden">The run declared itself hidden when it was started
 /// (ADR-0028, amendment 2026-09-30).</param>
@@ -52,7 +54,7 @@ public sealed record PublishedRun(
     IReadOnlyList<string> Tests,
     IReadOnlyList<string> Nodes,
     IReadOnlyList<string> Roles,
-    IReadOnlyList<string> Online,
+    IReadOnlyList<string> Capabilities,
     string Stress,
     bool Hidden,
     IReadOnlyList<string> Real);

@@ -170,7 +170,7 @@ pub unsafe extern "C" fn xmip_scope_index_capabilities_v1(
                 json!({
                     "node": said.node,
                     "roles": said.roles,
-                    "online": said.online,
+                    "capabilities": said.capabilities,
                     "published": said.published,
                     "evidence": said.evidence,
                     "refusal": said.refusal,

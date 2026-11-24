@@ -25,7 +25,8 @@ public sealed class ClusterSnapshotTest
     /// what each was started with.</summary>
     private static readonly string Line =
         $"RoundTrip · {Cluster.Name} · nodes {Receiver}=receiving "
-        + $"{Processor}=processing+sending {Sender}=sending · online {Receiver} · realistic";
+        + $"{Processor}=processing+sending {Sender}=sending · Node capabilities "
+        + $"{Receiver}=online · realistic";
 
     /// <summary>The fixture's three nodes in ordinal order, the order every
     /// list of them is answered in.</summary>
@@ -58,7 +59,7 @@ public sealed class ClusterSnapshotTest
         Assert.Equal(
             [$"{Receiver}=receiving", $"{Processor}=processing+sending", $"{Sender}=sending"],
             run.Roles);
-        Assert.Equal([Receiver], run.Online);
+        Assert.Equal([$"{Receiver}=online"], run.Capabilities);
         Assert.Equal(Line, run.Line());
     }
 
@@ -77,14 +78,14 @@ public sealed class ClusterSnapshotTest
         // A publisher that says no roles leaves the names bare, and the
         // line is what it always was.
         Assert.Equal(
-            $"Filing · {Cluster.Name} · nodes {Receiver} · none online · harsh",
+            $"Filing · {Cluster.Name} · nodes {Receiver} · no Node capability · harsh",
             new RunHeader(Cluster.Name, ["Filing"], [Receiver], [], [], "harsh").Line());
         Assert.Equal(NodeCapability.None, run.Capability(Receiver));
 
         // A run that found a node on a machine of its own says which, and
         // that the rest are simulated (ADR-0028, amendment 2026-10-21).
         Assert.Equal(
-            $"Filing · {Cluster.Name} · nodes {Receiver} · none online · real {Receiver}, "
+            $"Filing · {Cluster.Name} · nodes {Receiver} · no Node capability · real {Receiver}, "
                 + "the rest simulated · harsh",
             new RunHeader(
                 Cluster.Name, ["Filing"], [Receiver], [], [], "harsh", false, [Receiver])
@@ -102,7 +103,7 @@ public sealed class ClusterSnapshotTest
         Assert.True(received.Said);
         Assert.True(received.Published);
         Assert.Equal(["receiving"], received.Roles);
-        Assert.True(received.Online);
+        Assert.Equal(["online"], received.Capabilities);
         Assert.Equal("receiving · online", received.Line());
         Assert.Contains(
             "authentication and runtime capability are not modeled",
@@ -115,7 +116,7 @@ public sealed class ClusterSnapshotTest
         Assert.Equal(["processing", "sending"], both.Roles);
         Assert.Equal(["process", "send"], both.Stages);
         Assert.Equal("processing+sending", both.Words);
-        Assert.Equal("processing+sending · offline", both.Line());
+        Assert.Equal("processing+sending · no Node capability", both.Line());
 
         Assert.Equal(Ordered, surface.Index().Capabilities().Select(one => one.Node));
         Assert.False(surface.Capability($"{Receiver}-absent").Said);
@@ -130,7 +131,7 @@ public sealed class ClusterSnapshotTest
         Assert.False(started.Published);
         Assert.Equal("what the run started it with", started.Origin);
         Assert.Equal(["processing", "sending"], started.Roles);
-        Assert.True(run.Capability(Receiver).Online);
+        Assert.Equal(["online"], run.Capability(Receiver).Capabilities);
         Assert.Equal(NodeCapability.None, run.Capability($"{Receiver}-absent"));
 
         // A node started with no role of its own is named alone in [run], and
@@ -138,8 +139,10 @@ public sealed class ClusterSnapshotTest
         NodeCapability whole = NodeCapability.Started(Receiver);
         Assert.True(whole.Said);
         Assert.Empty(whole.Roles);
-        Assert.Equal("no role · offline", whole.Line());
-        Assert.Equal("no role · offline", Capability("declares no role; offline; x").Line());
+        Assert.Equal("no role · no Node capability", whole.Line());
+        Assert.Equal(
+            "no role · no Node capability",
+            Capability("declares no role; no Node capability; x").Line());
         Assert.Empty(Capability("alive").Roles);
 
         // The three stage roles together are executing, their sum, said once.
@@ -161,13 +164,16 @@ public sealed class ClusterSnapshotTest
     [Fact]
     public void ADeclarationReadsByTheNodesRuleAndARefusalIsCarriedWhole()
     {
-        NodeCapability lower = Capability("declares sending,receiving; online; x");
+        NodeCapability lower =
+            Capability("declares sending,receiving; Node capabilities online, erp-direct; x");
         Assert.Equal(Receiver, lower.Node);
         Assert.Equal(["receiving", "sending"], lower.Roles);
-        Assert.True(lower.Online);
+        Assert.Equal(["online", "erp-direct"], lower.Capabilities);
+        Assert.Equal("receiving+sending · online, erp-direct", lower.Line());
         Assert.Empty(lower.Refusal);
 
-        NodeCapability cased = Capability("declares Sending,RECEIVING; online; x");
+        NodeCapability cased =
+            Capability("declares Sending,RECEIVING; Node capabilities online; x");
         Assert.Empty(cased.Roles);
         Assert.Equal(Refusal("Sending,RECEIVING"), cased.Refusal);
         Assert.StartsWith("REFUSED:", cased.Refusal, StringComparison.Ordinal);
@@ -176,7 +182,8 @@ public sealed class ClusterSnapshotTest
 
         string refused = Refusal("receiving,relay+hold");
 
-        NodeCapability published = Capability("declares receiving,relay+hold; offline; x");
+        NodeCapability published =
+            Capability("declares receiving,relay+hold; no Node capability; x");
         Assert.Empty(published.Roles);
         Assert.Equal(refused, published.Refusal);
         Assert.Equal(refused, published.Line());
@@ -194,12 +201,12 @@ public sealed class ClusterSnapshotTest
     [Fact]
     public void OnlyTheRecordAtANodesCapabilityScopeIsItsDeclaration()
     {
+        const string Said = "declares sending; Node capabilities online; x";
         Assert.Null(NodeCapability.Declared(
-            $"{Cluster.Scope}/node/{Receiver}/receive/tcp", "declares sending; online; x"));
+            $"{Cluster.Scope}/node/{Receiver}/receive/tcp", Said));
         // The root's own capability scope names no node.
-        Assert.Null(NodeCapability.Declared(
-            $"{ScopeTree.Root}capability", "declares sending; online; x"));
-        Assert.Equal(Receiver, Capability("declares sending; online; x").Node);
+        Assert.Null(NodeCapability.Declared($"{ScopeTree.Root}capability", Said));
+        Assert.Equal(Receiver, Capability(Said).Node);
     }
 
     // The capability record the receiving node publishes, with this evidence.

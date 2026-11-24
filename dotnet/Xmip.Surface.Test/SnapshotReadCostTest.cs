@@ -152,6 +152,7 @@ public sealed class SnapshotReadCostTest(ITestOutputHelper output) : IDisposable
         string named = string.Join(", ", nodes.Select(node => $"\"{node}\""));
         string roles = string.Join(
             ", ", nodes.Select((node, place) => $"\"{node}={cluster.Roles[place]}\""));
+        string capabilities = string.Join(", ", nodes.Select(node => $"\"{node}=online\""));
         StringBuilder text = new();
         text.Append(
             CultureInfo.InvariantCulture,
@@ -191,7 +192,7 @@ public sealed class SnapshotReadCostTest(ITestOutputHelper output) : IDisposable
             tests = ["RoundTrip"]
             nodes = [{named}]
             roles = [{roles}]
-            online = [{named}]
+            capabilities = [{capabilities}]
             stress = "round {round}"
 
             [topology]

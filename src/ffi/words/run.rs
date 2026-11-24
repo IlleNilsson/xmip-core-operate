@@ -12,9 +12,9 @@ use crate::surface::node_capability::NodeCapability;
 use crate::surface::run_header::RunHeader;
 
 /// `xmip_run_said_v1`: the run `input` says — `observe::Run`'s JSON,
-/// `cluster`, `tests`, `nodes`, `roles`, `online`, `real`, `stress`,
+/// `cluster`, `tests`, `nodes`, `roles`, `capabilities`, `real`, `stress`,
 /// `hidden` — as `{"said", "line", "started": [{"node", "roles",
-/// "online", "refusal"}]}`, one started node for each of its roles'
+/// "capabilities", "refusal"}]}`, one started node for each of its roles'
 /// entries.
 ///
 /// # Safety
@@ -49,7 +49,7 @@ fn run_said(input: &str) -> Result<String, String> {
             json!({
                 "node": capability.node,
                 "roles": capability.roles,
-                "online": capability.online,
+                "capabilities": capability.capabilities,
                 "refusal": capability.refusal,
             })
         })
@@ -59,9 +59,9 @@ fn run_said(input: &str) -> Result<String, String> {
 }
 
 /// `xmip_capability_said_v1`: a node's declaration `input` —
-/// `{"node", "roles", "online", "published", "refusal"}` — as a surface
-/// says it: `{"said", "words", "line", "purpose", "stages", "route",
-/// "origin"}`.
+/// `{"node", "roles", "capabilities", "published", "refusal"}` — as a
+/// surface says it: `{"said", "words", "line", "purpose", "stages",
+/// "named", "origin"}`, `named` its Node capabilities in one phrase.
 ///
 /// # Safety
 /// As section 10's shape: both texts readable for their lengths; `out` has
@@ -86,19 +86,22 @@ fn capability_said(input: &str) -> Result<String, String> {
     let given: Value =
         serde_json::from_str(input).map_err(|failure| format!("not a declaration: {failure}"))?;
     let text = |key: &str| given[key].as_str().unwrap_or_default().to_string();
-    let capability = NodeCapability {
-        node: text("node"),
-        roles: given["roles"]
+    let words = |key: &str| -> Vec<String> {
+        given[key]
             .as_array()
-            .map(|roles| {
-                roles
+            .map(|words| {
+                words
                     .iter()
                     .filter_map(Value::as_str)
                     .map(str::to_string)
                     .collect()
             })
-            .unwrap_or_default(),
-        online: given["online"].as_bool().unwrap_or(false),
+            .unwrap_or_default()
+    };
+    let capability = NodeCapability {
+        node: text("node"),
+        roles: words("roles"),
+        capabilities: words("capabilities"),
         published: given["published"].as_bool().unwrap_or(false),
         evidence: text("evidence"),
         refusal: text("refusal"),
@@ -110,7 +113,7 @@ fn capability_said(input: &str) -> Result<String, String> {
         "line": capability.line(),
         "purpose": capability.purpose(),
         "stages": capability.stages(),
-        "route": capability.route(),
+        "named": capability.named(),
         "origin": capability.origin(),
     })
     .to_string())
@@ -140,7 +143,7 @@ mod tests {
         let run = json!({
             "cluster": test.name, "tests": ["t"], "nodes": [a, b],
             "roles": [format!("{a}=receiving"), format!("{b}=fly")],
-            "online": [a], "stress": "light",
+            "capabilities": [format!("{a}=online")], "stress": "light",
         })
         .to_string();
         let said: Value = serde_json::from_str(&run_said(&run).expect("said")).expect("JSON");
@@ -148,11 +151,11 @@ mod tests {
         assert_eq!(
             said["line"],
             format!(
-                "t · {} · nodes {a}=receiving {b}=fly · online {a} · light",
+                "t · {} · nodes {a}=receiving {b}=fly · Node capabilities {a}=online · light",
                 test.name
             )
         );
-        assert_eq!(said["started"][0]["online"], true);
+        assert_eq!(said["started"][0]["capabilities"], json!(["online"]));
         assert_eq!(said["started"][0]["roles"], json!(["receiving"]));
         assert!(
             said["started"][1]["refusal"]
@@ -160,13 +163,15 @@ mod tests {
                 .is_some_and(|it| !it.is_empty())
         );
 
-        let declared =
-            json!({"node": a, "roles": ["receiving"], "online": true, "published": true})
-                .to_string();
+        let declared = json!({
+            "node": a, "roles": ["receiving"], "capabilities": ["online", "erp-direct"],
+            "published": true
+        })
+        .to_string();
         let said: Value =
             serde_json::from_str(&capability_said(&declared).expect("said")).expect("JSON");
-        assert_eq!(said["line"], "receiving · online");
-        assert_eq!(said["route"], "online");
+        assert_eq!(said["line"], "receiving · online, erp-direct");
+        assert_eq!(said["named"], "online, erp-direct");
         assert_eq!(said["origin"], "published by the node");
         assert_eq!(said["stages"], json!(["receive"]));
         assert!(run_said("not json").is_err());

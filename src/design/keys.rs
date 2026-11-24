@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::design::shape::{Shape, Shapes, shapes};
 use configure::binding::BoundLocation;
-use configure::cluster::{NODES, ROLES};
+use configure::cluster::{CAPABILITIES, NODES, ROLES};
 use configure::section::SECTIONS;
 use configure::{ConfiguredLocation, LocationSettings, XmipApplication, XmipConfigurationDocument};
 
@@ -70,12 +70,13 @@ pub fn of_table(table: &[String]) -> Vec<&'static Key> {
 
 fn read() -> Vec<Key> {
     let document = shapes::<XmipConfigurationDocument>();
-    // A node declares its roles under its own table, never the cluster's
-    // shared top: the document's [`ROLES`] is the slice's copy of it.
+    // A node declares its roles and its Node capabilities under its own
+    // table, never the cluster's shared top: the document's [`ROLES`] and
+    // [`CAPABILITIES`] are the slice's copy of them.
     let declared = |key: &Key, at: usize| key.key == ROLES && key.table.len() == at;
     let mut keys: Vec<Key> = listed(&document, &[])
         .into_iter()
-        .filter(|key| !declared(key, 0))
+        .filter(|key| !declared(key, 0) && !(key.key == CAPABILITIES && key.table.is_empty()))
         .collect();
 
     keys.push(key(&[], NODES, "free", &[], false));
@@ -273,6 +274,17 @@ mod tests {
             of_table(&[]).iter().all(|key| key.key != ROLES),
             "no shared roles"
         );
+        // A node's Node capabilities, under its own table alone, and what a
+        // piece of work requires of them (ADR-0056, amendment 2026-11-24).
+        assert!(!named(&["nodes", &node], CAPABILITIES).required);
+        assert!(
+            of_table(&[]).iter().all(|key| key.key != CAPABILITIES),
+            "no shared capabilities"
+        );
+        for work in ["receive_locations", "work_processes", "send_ports"] {
+            let requires = named(&["xmip_applications", work], configure::port::REQUIRES);
+            assert!(!requires.required, "{work}: placed as before where absent");
+        }
         assert_eq!(
             named(&["nodes", &node, "service"], "online").kind,
             "boolean"

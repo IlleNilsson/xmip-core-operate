@@ -5,8 +5,10 @@ using Xmip.Operate;
 namespace Xmip.Surface;
 
 /// <summary>
-/// What one node declares (ADR-0056): its roles, whether a route off its
-/// machine may be assumed, and the evidence it published saying so. Its
+/// What one node declares (ADR-0056): its roles, its Node capabilities —
+/// what its environment gives it, <c>online</c> among them where a route off
+/// its machine may be assumed (amendment 2026-11-24) — and the evidence it
+/// published saying so. Its
 /// roles are the one declaration of what it is for and which stages of the
 /// message path it serves — receiving, processing, sending, executing (all
 /// three in one process), operational, monitoring, development, storage
@@ -24,7 +26,7 @@ namespace Xmip.Surface;
 public sealed record NodeCapability(
     string Node,
     IReadOnlyList<string> Roles,
-    bool Online,
+    IReadOnlyList<string> Capabilities,
     bool Published,
     string Evidence)
 {
@@ -35,7 +37,7 @@ public sealed record NodeCapability(
     public string Refusal { get; init; } = string.Empty;
 
     /// <summary>A node that declared nothing a surface can read.</summary>
-    public static NodeCapability None { get; } = new(string.Empty, [], false, false, string.Empty);
+    public static NodeCapability None { get; } = new(string.Empty, [], [], false, string.Empty);
 
     /// <summary>Whether there is a node behind this at all.</summary>
     public bool Said => Node.Length > 0;
@@ -60,8 +62,9 @@ public sealed record NodeCapability(
         }
     }
 
-    /// <summary>The online capability in the word a health record carries.</summary>
-    public string Route => Text("route");
+    /// <summary>Its Node capabilities in one phrase, <c>online, erp-direct</c>,
+    /// or <c>no Node capability</c>.</summary>
+    public string Named => Text("named");
 
     /// <summary>Where the declaration came from, which is never the same
     /// question as what it says: a node publishes its capability, and
@@ -69,7 +72,7 @@ public sealed record NodeCapability(
     public string Origin => Text("origin");
 
     /// <summary>What every surface says of one node, in one phrase:
-    /// <c>receiving+processing · online</c>. A node declaring no role says so
+    /// <c>receiving+processing · online, erp-direct</c>. A node declaring no role says so
     /// in words, because declaring none is a choice and not an absence. A
     /// refused declaration says its refusal instead.</summary>
     public string Line()
@@ -92,7 +95,7 @@ public sealed record NodeCapability(
     /// <summary>What a node published of itself, when the record at
     /// <paramref name="scope"/> is the capability record it publishes at
     /// <c>&lt;node&gt;/capability</c>: the node beneath which it sits, the
-    /// roles and online capability its evidence declares, and the evidence
+    /// roles and Node capabilities its evidence declares, and the evidence
     /// whole, so an operator reads what the node actually said. Null for any
     /// other record. Where the record sits and how its evidence reads are
     /// <c>observe::capability</c>'s and <c>node::Capability</c>'s, called in
@@ -104,7 +107,7 @@ public sealed record NodeCapability(
         ArgumentNullException.ThrowIfNull(evidence);
 
         return RuntimeLibrary.Rules.Published(scope, evidence) is { } said
-            ? new NodeCapability(said.Node, said.Roles, said.Online, true, evidence)
+            ? new NodeCapability(said.Node, said.Roles, said.Capabilities, true, evidence)
             {
                 Refusal = said.Refusal,
             }
@@ -115,7 +118,7 @@ public sealed record NodeCapability(
     /// <c>&lt;node&gt;=receiving+sending</c>, or a bare <c>&lt;node&gt;</c> for a node
     /// started with no role of its own — as <c>node::Capability::from_entry</c>
     /// reads it in the runtime. Whatever the node is called is read as a name
-    /// and nothing else. It says nothing of the online capability, which
+    /// and nothing else. It says nothing of the Node capabilities, which
     /// <c>[run]</c> lists apart.</summary>
     public static NodeCapability Started(string entry)
     {
@@ -123,7 +126,7 @@ public sealed record NodeCapability(
 
         DeclaredCapability said = RuntimeLibrary.Rules.Entry(entry);
 
-        return new NodeCapability(said.Node, said.Roles, false, false, string.Empty)
+        return new NodeCapability(said.Node, said.Roles, [], false, string.Empty)
         {
             Refusal = said.Refusal,
         };
@@ -174,7 +177,13 @@ public sealed record NodeCapability(
             }
 
             writer.WriteEndArray();
-            writer.WriteBoolean("online", Online);
+            writer.WriteStartArray("capabilities");
+            foreach (string capability in Capabilities)
+            {
+                writer.WriteStringValue(capability);
+            }
+
+            writer.WriteEndArray();
             writer.WriteBoolean("published", Published);
             writer.WriteString("refusal", Refusal);
         });

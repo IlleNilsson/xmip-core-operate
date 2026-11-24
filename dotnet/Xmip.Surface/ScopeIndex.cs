@@ -93,7 +93,7 @@ public sealed class ScopeIndex
     }
 
     /// <summary>
-    /// What a node declared — its roles and its online capability — as the
+    /// What a node declared — its roles and its Node capabilities — as the
     /// node itself published it at <c>&lt;node&gt;/capability</c> (ADR-0056
     /// clause 1: a node declares its capabilities and nothing is inferred).
     /// <see cref="NodeCapability.None"/> where it published nothing.
@@ -268,7 +268,10 @@ public sealed class ScopeIndex
                     .. node.GetProperty("roles").EnumerateArray()
                         .Select(role => role.GetString() ?? string.Empty),
                 ],
-                node.GetProperty("online").GetBoolean(),
+                [
+                    .. node.GetProperty("capabilities").EnumerateArray()
+                        .Select(capability => capability.GetString() ?? string.Empty),
+                ],
                 node.GetProperty("published").GetBoolean(),
                 node.GetProperty("evidence").GetString() ?? string.Empty)
             {

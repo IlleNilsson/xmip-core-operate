@@ -209,15 +209,36 @@ public sealed partial class RuntimeRules
         XmipStr node;
         nuint count = 0;
         nuint saidLength = 0;
-        byte online = 0;
         int status;
 
-        unsafe
+        // Its Node capabilities, borrowed from the evidence pinned above:
+        // asked with room for a few, and again with room for all where it
+        // declares more (ADR-0056, amendment 2026-11-24).
+        XmipStr[] named = new XmipStr[8];
+        nuint namedCount = 0;
+        bool asking;
+
+        do
         {
-            status = _published(
-                scopeText.Value, evidenceText.Value, &node, roles, (nuint)RoleWords.Count, &count,
-                &online, said, Small, &saidLength);
+            unsafe
+            {
+                fixed (XmipStr* capabilities = named)
+                {
+                    status = _published(
+                        scopeText.Value, evidenceText.Value, &node, roles, (nuint)RoleWords.Count,
+                        &count, capabilities, (nuint)named.Length, &namedCount,
+                        said, Small, &saidLength);
+                }
+            }
+
+            asking = status == (int)XmipStatus.Ok && namedCount > (nuint)named.Length;
+
+            if (asking)
+            {
+                named = new XmipStr[checked((int)namedCount)];
+            }
         }
+        while (asking);
 
         if (status == (int)XmipStatus.NotFound)
         {
@@ -228,15 +249,19 @@ public sealed partial class RuntimeRules
         {
             unsafe
             {
-                return new DeclaredCapability(node.Read(), [], false, Sentence(said, saidLength));
+                return new DeclaredCapability(node.Read(), [], [], Sentence(said, saidLength));
             }
         }
 
         Check(status);
         unsafe
         {
-            return new DeclaredCapability(
-                node.Read(), Read(roles, count), online != 0, string.Empty);
+            fixed (XmipStr* capabilities = named)
+            {
+                return new DeclaredCapability(
+                    node.Read(), Read(roles, count), Read(capabilities, namedCount),
+                    string.Empty);
+            }
         }
     }
 
@@ -267,14 +292,14 @@ public sealed partial class RuntimeRules
         {
             unsafe
             {
-                return new DeclaredCapability(node.Read(), [], false, Sentence(said, saidLength));
+                return new DeclaredCapability(node.Read(), [], [], Sentence(said, saidLength));
             }
         }
 
         Check(status);
         unsafe
         {
-            return new DeclaredCapability(node.Read(), Read(roles, count), false, string.Empty);
+            return new DeclaredCapability(node.Read(), Read(roles, count), [], string.Empty);
         }
     }
 

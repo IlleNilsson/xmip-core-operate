@@ -233,15 +233,25 @@ public sealed class RuntimeRulesTest
     public void ACapabilityRecordAndARunEntryCrossWithTheirNameAndARefusalKeepsIt()
     {
         DeclaredCapability? said = Rules.Published(
-            $"{Node}/capability", "declares sending,receiving; online; x");
+            $"{Node}/capability",
+            "declares sending,receiving; Node capabilities online, erp-direct; x");
 
         Assert.NotNull(said);
-        Assert.Equal(new DeclaredCapability(Receiver, said.Roles, true, string.Empty), said);
+        Assert.Equal(Receiver, said.Node);
+        Assert.Empty(said.Refusal);
         Assert.Equal(["receiving", "sending"], said.Roles);
+        Assert.Equal(["online", "erp-direct"], said.Capabilities);
+
+        // More Node capabilities than the first ask has room for cross whole.
+        string[] many = [.. Enumerable.Range(1, 12).Select(at => $"firewall-party-{at}")];
+        DeclaredCapability? wide = Rules.Published(
+            $"{Node}/capability",
+            $"declares receiving; Node capabilities {string.Join(", ", many)}; x");
+        Assert.Equal(many, wide?.Capabilities);
         Assert.Null(Rules.Published($"{Node}/receive", "declares sending"));
 
         DeclaredCapability refused = Rules.Published(
-            $"{Cluster.Scope}/node/{Wide}/capability", "declares relay; online;")!;
+            $"{Cluster.Scope}/node/{Wide}/capability", "declares relay; no Node capability;")!;
         Assert.Equal(Wide, refused.Node);
         Assert.Empty(refused.Roles);
         Assert.StartsWith("REFUSED:", refused.Refusal, StringComparison.Ordinal);

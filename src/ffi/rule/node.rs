@@ -92,8 +92,11 @@ unsafe fn role_declared(
     let said = Capability::parse(declared);
 
     // SAFETY: per the contract above.
-    unsafe { write_declared(said, roles, cap, out_len, refusal, refusal_cap, refusal_len) }
-        .map_or(status::INVALID, |_| status::OK)
+    if unsafe { write_declared(said, roles, cap, out_len, refusal, refusal_cap, refusal_len) } {
+        status::OK
+    } else {
+        status::INVALID
+    }
 }
 
 /// `node::NodeRole::stages`, forwarded: the stage words of the role a word
@@ -286,16 +289,20 @@ unsafe fn capability_entry(
     let (name, said) = Capability::from_entry(entry);
 
     // SAFETY: per the contract above.
-    unsafe {
+    let declared = unsafe {
         out_node.write(borrow(name));
         write_declared(said, roles, cap, out_len, refusal, refusal_cap, refusal_len)
+    };
+    if declared {
+        status::OK
+    } else {
+        status::INVALID
     }
-    .map_or(status::INVALID, |_| status::OK)
 }
 
 /// A declaration's answer in the header's shape: its roles in the fill
-/// shape and no refusal, or no role and the refusal written. `Some` with
-/// the online capability when it was declared, `None` when refused.
+/// shape and no refusal, or no role and the refusal written. Whether it
+/// was declared, rather than refused.
 ///
 /// # Safety
 /// `roles` has room for `cap` entries and `refusal` for `refusal_cap`
@@ -308,7 +315,7 @@ pub(crate) unsafe fn write_declared(
     refusal: *mut u8,
     refusal_cap: usize,
     refusal_len: *mut usize,
-) -> Option<bool> {
+) -> bool {
     match said {
         Ok(capability) => {
             let words = capability.roles().iter().map(|role| role.name());
@@ -317,7 +324,7 @@ pub(crate) unsafe fn write_declared(
                 fill(words, roles, cap, out_len);
                 *refusal_len = 0;
             }
-            Some(capability.is_online())
+            true
         }
         Err(sentence) => {
             // SAFETY: per the contract above.
@@ -325,7 +332,7 @@ pub(crate) unsafe fn write_declared(
                 *out_len = 0;
                 refuse(&sentence, refusal, refusal_cap, refusal_len);
             }
-            None
+            false
         }
     }
 }

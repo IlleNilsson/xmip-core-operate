@@ -11,7 +11,7 @@ node = "xmip:///CL2"
 scope = "xmip:///CL2/node/RX1/capability"
 state = "fine"
 severity = 0
-evidence = "declares receiving; online"
+evidence = "declares receiving; Node capabilities online"
 observed_unix_nanos = 1789111688000000000
 
 [[records]]
@@ -45,7 +45,7 @@ cluster = "CL2"
 tests = ["RoundTrip"]
 nodes = ["RX1", "TX1"]
 roles = ["RX1=receiving", "TX1=sending"]
-online = ["RX1"]
+capabilities = ["RX1=online"]
 stress = "harsh"
 
 # Nothing rose over the window its roll keeps: its one link's rate is zero,

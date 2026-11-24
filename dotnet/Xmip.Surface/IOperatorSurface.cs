@@ -186,7 +186,7 @@ public partial interface IOperatorSurface
 
     /// <summary>
     /// What the run behind this surface was started with — the tests, the
-    /// nodes, which of them are online, how hard — when its publisher says;
+    /// nodes, their roles and Node capabilities, how hard — when its publisher says;
     /// <see cref="RunHeader.None"/> when it does not, which every surface
     /// but a System Tests snapshot answers today.
     /// </summary>
@@ -196,8 +196,8 @@ public partial interface IOperatorSurface
     }
 
     /// <summary>
-    /// What one node declares (ADR-0056) — its roles and its online
-    /// capability — by name. What the node
+    /// What one node declares (ADR-0056) — its roles and its Node
+    /// capabilities — by name. What the node
     /// itself published wins; a node the publication holds no capability
     /// record for falls back to what <c>[run]</c> says it was started with,
     /// and <see cref="NodeCapability.Published"/> says which of the two a

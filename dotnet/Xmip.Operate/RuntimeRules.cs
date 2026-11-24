@@ -70,7 +70,8 @@ public sealed partial class RuntimeRules
     private readonly delegate* unmanaged[Cdecl]<XmipStr, XmipStr*, nuint, nuint*, int> _roleStages;
     private readonly delegate* unmanaged[Cdecl]<XmipStr, byte*, nuint, nuint*, int> _purpose;
     private readonly delegate* unmanaged[Cdecl]<
-        XmipStr, XmipStr, XmipStr*, XmipStr*, nuint, nuint*, byte*, byte*, nuint, nuint*, int>
+        XmipStr, XmipStr, XmipStr*, XmipStr*, nuint, nuint*, XmipStr*, nuint, nuint*,
+        byte*, nuint, nuint*, int>
         _published;
     private readonly delegate* unmanaged[Cdecl]<
         XmipStr, XmipStr*, XmipStr*, nuint, nuint*, byte*, nuint, nuint*, int> _entry;
@@ -119,7 +120,8 @@ public sealed partial class RuntimeRules
         _purpose = (delegate* unmanaged[Cdecl]<XmipStr, byte*, nuint, nuint*, int>)
             Export(library, OperateAbi.RolePurposeEntrypoint);
         _published = (delegate* unmanaged[Cdecl]<
-            XmipStr, XmipStr, XmipStr*, XmipStr*, nuint, nuint*, byte*, byte*, nuint, nuint*, int>)
+            XmipStr, XmipStr, XmipStr*, XmipStr*, nuint, nuint*, XmipStr*, nuint, nuint*,
+            byte*, nuint, nuint*, int>)
             Export(library, OperateAbi.CapabilityPublishedEntrypoint);
         _entry = (delegate* unmanaged[Cdecl]<
             XmipStr, XmipStr*, XmipStr*, nuint, nuint*, byte*, nuint, nuint*, int>)

@@ -367,7 +367,7 @@ unsafe fn publication_run(
         run_list::TESTS => RunList::Tests,
         run_list::NODES => RunList::Nodes,
         run_list::ROLES => RunList::Roles,
-        run_list::ONLINE => RunList::Online,
+        run_list::CAPABILITIES => RunList::Capabilities,
         run_list::REAL => RunList::Real,
         _ => return status::INVALID,
     };
@@ -416,7 +416,7 @@ observed_unix_nanos = 9
 scope = "{scope}/node/{first}/capability"
 state = "sulking"
 severity = 0
-evidence = "declares receiving; online; x"
+evidence = "declares receiving; Node capabilities online; x"
 observed_unix_nanos = 7
 
 [[counts]]
@@ -432,7 +432,7 @@ cluster = "{name}"
 tests = ["RoundTrip"]
 nodes = ["{first}"]
 roles = ["{first}=receiving"]
-online = ["{first}"]
+capabilities = ["{first}=online"]
 stress = "harsh"
 
 [topology]

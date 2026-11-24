@@ -64,8 +64,8 @@ public sealed class ScopeItemTest
     {
         IOperatorSurface surface = new Published(
             new(
-                $"{Receiving}/capability", HealthState.Fine, 0, "declares receiving; online; x",
-                Now),
+                $"{Receiving}/capability", HealthState.Fine, 0,
+                "declares receiving; Node capabilities online; x", Now),
             new($"{Receiving}/receive/tcp", HealthState.Fine, 0, "", Now),
             new($"{Processing}/receive/tcp", HealthState.Fine, 0, "", Now));
 

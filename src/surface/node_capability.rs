@@ -1,16 +1,21 @@
-//! What one node declares (ADR-0056): its roles, whether a route off its
-//! machine may be assumed, and whether the node published it or the run
+//! What one node declares (ADR-0056): its roles, its Node capabilities —
+//! `online` among them where a route off its machine may be assumed
+//! (amendment 2026-11-24) — and whether the node published it or the run
 //! started it with it. The reading of a declaration is `node::Capability`'s
 //! and `observe::capability`'s; this is what a surface says of one.
 
 use node::{Capability, NodeRole, Stage};
+
+/// What a surface says of a node declaring no Node capability.
+const NO_NODE_CAPABILITY: &str = "no Node capability";
 
 /// One node's declaration, or [`NodeCapability::none`].
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct NodeCapability {
     pub node: String,
     pub roles: Vec<String>,
-    pub online: bool,
+    /// Its Node capabilities, in the order declared.
+    pub capabilities: Vec<String>,
     /// Published by the node; otherwise what the run started it with.
     pub published: bool,
     pub evidence: String,
@@ -51,10 +56,15 @@ impl NodeCapability {
             .collect()
     }
 
-    /// `online` or `offline`.
+    /// Its Node capabilities in one phrase, `online, erp-direct`, or `no
+    /// Node capability`.
     #[must_use]
-    pub fn route(&self) -> &'static str {
-        if self.online { "online" } else { "offline" }
+    pub fn named(&self) -> String {
+        if self.capabilities.is_empty() {
+            NO_NODE_CAPABILITY.to_string()
+        } else {
+            self.capabilities.join(", ")
+        }
     }
 
     /// Where the declaration came from, in words.
@@ -67,7 +77,8 @@ impl NodeCapability {
         }
     }
 
-    /// One line: its roles and route, or its refusal; empty for none.
+    /// One line: its roles and Node capabilities, or its refusal; empty for
+    /// none.
     #[must_use]
     pub fn line(&self) -> String {
         if !self.said() {
@@ -75,9 +86,9 @@ impl NodeCapability {
         } else if !self.refusal.is_empty() {
             self.refusal.clone()
         } else if self.roles.is_empty() {
-            format!("no role · {}", self.route())
+            format!("no role · {}", self.named())
         } else {
-            format!("{} · {}", self.words(), self.route())
+            format!("{} · {}", self.words(), self.named())
         }
     }
 
@@ -107,15 +118,12 @@ impl NodeCapability {
     }
 
     /// What a run started a node with, from its `[run]` entry,
-    /// `<node>=receiving+sending`; whether it is online is the run's list
+    /// `<node>=receiving+sending`; its Node capabilities are the run's list
     /// to say (`RunHeader::capability`).
     #[must_use]
     pub fn started(entry: &str) -> Self {
         let (node, said) = Capability::from_entry(entry);
-        let mut started = Self::from(node, said);
-        started.online = false;
-
-        started
+        Self::from(node, said)
     }
 
     fn from(node: &str, said: Result<Capability, String>) -> Self {
@@ -127,7 +135,7 @@ impl NodeCapability {
                     .iter()
                     .map(|role| role.name().to_string())
                     .collect(),
-                online: capability.is_online(),
+                capabilities: capability.declared().to_vec(),
                 ..Self::default()
             },
             Err(refusal) => Self {

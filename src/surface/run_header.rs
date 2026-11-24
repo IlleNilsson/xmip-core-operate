@@ -1,7 +1,7 @@
 //! What a run was started with, as its publisher says it under `[run]`
-//! (`observe::Run`): the cluster, the tests, the nodes and the roles each
-//! declared, which are online, which are real, and how hard — said in one
-//! line every surface puts at the top (the owner, 2026-09-19).
+//! (`observe::Run`): the cluster, the tests, the nodes and the roles and
+//! Node capabilities each declared, which are real, and how hard — said in
+//! one line every surface puts at the top (the owner, 2026-09-19).
 
 use observe::Run;
 
@@ -32,8 +32,8 @@ impl RunHeader {
             || !run.stress.is_empty()
     }
 
-    /// What the run started `node` with, online where its list says;
-    /// [`NodeCapability::none`] where it names none.
+    /// What the run started `node` with, its Node capabilities as its list
+    /// says; [`NodeCapability::none`] where it names none.
     #[must_use]
     pub fn capability(&self, node: &str) -> NodeCapability {
         self.run
@@ -42,13 +42,21 @@ impl RunHeader {
             .map(|entry| NodeCapability::started(entry))
             .find(|started| started.node == node)
             .map_or_else(NodeCapability::none, |mut started| {
-                started.online = self.run.online.iter().any(|online| online == node);
+                started.capabilities = self
+                    .run
+                    .capabilities
+                    .iter()
+                    .map(|entry| node::Capability::from_declared_entry(entry))
+                    .find(|(named, _)| *named == node)
+                    .and_then(|(_, words)| words.ok())
+                    .unwrap_or_default();
                 started
             })
     }
 
-    /// The one line: tests, cluster, nodes as each declared, online, real,
-    /// stress and hidden, joined by ` · `; empty where nothing was said.
+    /// The one line: tests, cluster, nodes as each declared, their Node
+    /// capabilities, real, stress and hidden, joined by ` · `; empty where
+    /// nothing was said.
     #[must_use]
     pub fn line(&self) -> String {
         if !self.said() {
@@ -69,10 +77,10 @@ impl RunHeader {
         } else {
             let declared: Vec<&str> = run.nodes.iter().map(|node| self.declared(node)).collect();
             parts.push(format!("nodes {}", declared.join(" ")));
-            parts.push(if run.online.is_empty() {
-                "none online".to_string()
+            parts.push(if run.capabilities.is_empty() {
+                "no Node capability".to_string()
             } else {
-                format!("online {}", run.online.join(" "))
+                format!("Node capabilities {}", run.capabilities.join(" "))
             });
             if !run.real.is_empty() {
                 parts.push(format!("real {}, the rest simulated", run.real.join(" ")));
@@ -112,7 +120,7 @@ mod tests {
             tests: vec!["t".into()],
             nodes: vec![a.clone(), b.clone()],
             roles: vec![declared.clone()],
-            online: vec![a.clone()],
+            capabilities: vec![format!("{a}=online+erp-direct")],
             stress: "light".into(),
             ..Run::default()
         };
@@ -121,11 +129,11 @@ mod tests {
         assert_eq!(
             header.line(),
             format!(
-                "t · {} · nodes {declared} {b} · online {a} · light",
+                "t · {} · nodes {declared} {b} · Node capabilities {a}=online+erp-direct · light",
                 test.name
             )
         );
-        assert!(header.capability(a).online);
+        assert_eq!(header.capability(a).capabilities, ["online", "erp-direct"]);
         assert!(!header.capability(b).said());
         assert_eq!(RunHeader::default().line(), "");
     }
