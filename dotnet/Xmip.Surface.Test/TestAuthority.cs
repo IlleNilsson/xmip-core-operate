@@ -90,7 +90,7 @@ internal sealed class TestAuthority : IDisposable
             + "authority = \"authority\"\nlifetime = \"1h\"\n";
         Assert.True(
             RuntimeLibrary.Rules.Design.TrySignedSlice(
-                cluster, Path.Combine(folder, "cluster.xmip"), "d", "c", kept,
+                cluster, "d", "c", kept,
                 out string answer),
             answer);
         using System.Text.Json.JsonDocument signed = System.Text.Json.JsonDocument.Parse(answer);

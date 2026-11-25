@@ -10,9 +10,10 @@ namespace Xmip.Surface;
 /// to as <c>&lt;node&gt;/node.xmip</c> — the name desired state writes
 /// it by (<c>deployment-model.md</c> section 8) — and the node of it this
 /// desktop starts, as <c>gui.toml</c> declares them. Every slice is the
-/// runtime's one slicing, signed by the cluster's authority beside the
-/// cluster's file (<c>xmip_cluster_signed_slice_v1</c>; ADR-0031, amendment
-/// 2026-11-06), and written with that authority's certificate beside it;
+/// runtime's one slicing, signed by the cluster's authority kept in this
+/// account's own Xmip folder on this machine, never beside the cluster's
+/// file (<c>xmip_cluster_signed_slice_v1</c>; ADR-0031, amendments 2026-11-06
+/// and 2026-11-25), and written with that authority's certificate beside it;
 /// nothing here takes the file apart or signs it.
 /// </summary>
 /// <remarks>
@@ -29,7 +30,10 @@ namespace Xmip.Surface;
 /// <param name="directory">Where each node's slice is written.</param>
 /// <param name="node">The node this desktop starts; null where it starts
 /// none.</param>
-public sealed class SliceDelivery(string clusterPath, string directory, string? node)
+/// <param name="authority">The folder the cluster's authority is kept in;
+/// null for this account's own on this machine, the desktop's.</param>
+public sealed class SliceDelivery(
+    string clusterPath, string directory, string? node, string? authority)
 {
     /// <summary>The file name a node reads its slice from.</summary>
     public const string FileName = "node.xmip";
@@ -75,7 +79,8 @@ public sealed class SliceDelivery(string clusterPath, string directory, string? 
             string.IsNullOrWhiteSpace(slices)
                 ? Path.Combine(data, "slices")
                 : TomlDocument.Resolve(slices, basePath),
-            string.IsNullOrWhiteSpace(node) ? null : node);
+            string.IsNullOrWhiteSpace(node) ? null : node,
+            null);
     }
 
     /// <summary>The cluster's <c>cluster.xmip</c>.</summary>
@@ -121,7 +126,7 @@ public sealed class SliceDelivery(string clusterPath, string directory, string? 
     public NodeDelivery Deliver(string text, string name)
     {
         if (!RuntimeLibrary.Rules.Design.TrySignedSlice(
-                text, clusterPath, name, null, null, out string answer))
+                text, name, null, authority, out string answer))
         {
             return new NodeDelivery(name, new NodeDelivery.Standing.Refused(), answer);
         }

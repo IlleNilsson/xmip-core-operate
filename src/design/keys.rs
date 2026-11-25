@@ -285,9 +285,13 @@ mod tests {
             let requires = named(&["xmip_applications", work], configure::port::REQUIRES);
             assert!(!requires.required, "{work}: placed as before where absent");
         }
-        assert_eq!(
-            named(&["nodes", &node, "service"], "online").kind,
-            "boolean"
+        // `online` is a Node capability since 2026-11-24, no key of a
+        // node's [service].
+        assert!(
+            of_table(&path(&["nodes", &node, "service"]))
+                .iter()
+                .all(|key| key.key != "online"),
+            "online is a capability"
         );
         let depth = named(&["xmip_applications", "receive_locations"], "depth");
         assert_eq!(depth.kind, "choice");

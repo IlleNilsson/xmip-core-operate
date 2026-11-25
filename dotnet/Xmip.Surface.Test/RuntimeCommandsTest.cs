@@ -18,7 +18,8 @@ public sealed class RuntimeCommandsTest : IDisposable
         return new RuntimeCommands(
             Estate.Library(),
             new ProgramAudit("xmip-operations", AuditDirectory),
-            new SliceDelivery(clusterPath, _directory.Inside("slices"), node));
+            new SliceDelivery(
+                clusterPath, _directory.Inside("slices"), node, _directory.Inside("kept")));
     }
 
     private string Audited()

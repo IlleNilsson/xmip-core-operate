@@ -103,28 +103,26 @@ public sealed class RuntimeDesign
     }
 
     /// <summary><paramref name="node"/>'s document sliced from the cluster's
-    /// file <paramref name="cluster"/>, kept at <paramref name="clusterPath"/>,
-    /// as the cluster <paramref name="name"/> where the environment names it,
-    /// and signed by the cluster's authority kept in
-    /// <paramref name="authority"/>, or beside that file where it names none
-    /// — made there where none is kept — as <c>{"text","authority"}</c>: the
-    /// file the node is given and the certificate it checks it by. False,
-    /// with the refusal, as <see cref="TrySlices"/>, or where the authority
-    /// cannot be kept.</summary>
+    /// file <paramref name="cluster"/>, as the cluster <paramref name="name"/>
+    /// where the environment names it, and signed by the cluster's authority
+    /// kept in <paramref name="authority"/>, or where it names none in this
+    /// account's own Xmip folder on this machine, never beside the cluster's
+    /// file (ADR-0031, amendment 2026-11-25) — made there where none is kept
+    /// — as <c>{"text","authority"}</c>: the file the node is given and the
+    /// certificate it checks it by. False, with the refusal, as
+    /// <see cref="TrySlices"/>, where the cluster has no name and no folder
+    /// is named, or where the authority cannot be kept.</summary>
     public bool TrySignedSlice(
         string cluster,
-        string clusterPath,
         string node,
         string? name,
         string? authority,
         out string answer)
     {
-        ArgumentNullException.ThrowIfNull(clusterPath);
         ArgumentNullException.ThrowIfNull(node);
 
         System.Text.Json.Nodes.JsonObject argument = new()
         {
-            ["cluster"] = clusterPath,
             ["node"] = node,
         };
         if (name is not null)

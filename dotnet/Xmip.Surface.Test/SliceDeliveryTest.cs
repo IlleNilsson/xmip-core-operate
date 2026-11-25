@@ -28,7 +28,8 @@ public sealed class SliceDeliveryTest : IDisposable
         ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string here = Estate.Cluster.Nodes[0];
         string there = Estate.Cluster.Nodes[1];
-        SliceDelivery delivery = new(cluster.Path, _directory.Inside("slices"), here);
+        SliceDelivery delivery =
+            new(cluster.Path, _directory.Inside("slices"), here, _directory.Inside("kept"));
 
         IReadOnlyList<NodeDelivery> delivered = delivery.Deliver(cluster);
 
@@ -44,6 +45,14 @@ public sealed class SliceDeliveryTest : IDisposable
             Path.GetDirectoryName(placed)!,
             SliceDelivery.AuthorityFolder,
             SliceDelivery.AuthorityCertificate)));
+
+        // Signed by the authority in the folder named, made there; none is
+        // made beside the cluster's file, which may be in a repository
+        // (open problem 181).
+        Assert.True(File.Exists(Path.Combine(
+            _directory.Inside("kept"), SliceDelivery.AuthorityCertificate)));
+        Assert.False(Directory.Exists(Path.Combine(
+            Path.GetDirectoryName(cluster.Path)!, SliceDelivery.AuthorityFolder)));
 
         NodeDelivery written = delivered[1];
         Assert.True(File.Exists(Assert.IsType<NodeDelivery.Standing.NotShipped>(
@@ -62,7 +71,8 @@ public sealed class SliceDeliveryTest : IDisposable
         string path = Estate.Written(_directory.Path).Path;
         File.AppendAllText(path, $"[nodes.{refused}.service]\nnode_name = \"elsewhere\"\n");
         ClusterConfiguration cluster = ClusterConfiguration.Open(path);
-        SliceDelivery delivery = new(cluster.Path, _directory.Inside("slices"), null);
+        SliceDelivery delivery =
+            new(cluster.Path, _directory.Inside("slices"), null, _directory.Inside("kept"));
 
         IReadOnlyList<NodeDelivery> delivered = delivery.Deliver(cluster);
 
@@ -78,7 +88,8 @@ public sealed class SliceDeliveryTest : IDisposable
     {
         string path = Estate.Written(_directory.Path).Path;
         string here = Estate.Cluster.Nodes[0];
-        SliceDelivery delivery = new(path, _directory.Inside("slices"), here);
+        SliceDelivery delivery =
+            new(path, _directory.Inside("slices"), here, _directory.Inside("kept"));
         const int Writers = 8;
         const string NotWritten = "REFUSED: sliced, and not written";
 
@@ -135,7 +146,8 @@ public sealed class SliceDeliveryTest : IDisposable
     {
         ClusterConfiguration cluster = Estate.Written(_directory.Path);
         string here = Estate.Cluster.Nodes[0];
-        SliceDelivery delivery = new(cluster.Path, _directory.Inside("slices"), here);
+        SliceDelivery delivery =
+            new(cluster.Path, _directory.Inside("slices"), here, _directory.Inside("kept"));
         string slice = delivery.PathOf(here);
         Directory.CreateDirectory(Path.GetDirectoryName(slice)!);
 
@@ -155,7 +167,8 @@ public sealed class SliceDeliveryTest : IDisposable
     {
         ClusterConfiguration cluster = Estate.Written(_directory.Path);
         SliceDelivery delivery =
-            new(cluster.Path, _directory.Inside("slices"), Estate.Cluster.Nodes[0]);
+            new(cluster.Path, _directory.Inside("slices"), Estate.Cluster.Nodes[0],
+                _directory.Inside("kept"));
 
         // A newer save replaced the file after this one read it.
         File.AppendAllText(cluster.Path, "# saved by a newer save\n");

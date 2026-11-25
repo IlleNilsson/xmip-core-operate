@@ -95,42 +95,33 @@ pub fn slices(cluster: &str, node: &str) -> Result<String, String> {
 
 /// `node`'s document sliced from the cluster's file `cluster` and signed by
 /// the cluster's authority, the runtime's one slicing and signing
-/// (`signed::sliced_signed`; ADR-0031, amendments 2026-11-06 and
-/// 2026-11-19). `argument` is `{"cluster","node"}`, the file's path and the
-/// node, and where given `"name"`, the cluster's name the environment gives,
-/// and `"authority"`, the folder the authority is kept in, which signs in
-/// place of the one beside the file, made there where none is kept; the
-/// answer is `{"text","authority"}`, the file the node is given and the
-/// certificate it checks it by, which a surface writes beside it.
+/// (`signed::sliced_signed`; ADR-0031, amendments 2026-11-06, 2026-11-19
+/// and 2026-11-25). `argument` is `{"node"}`, and where given `"name"`, the
+/// cluster's name the environment gives, and `"authority"`, the folder the
+/// authority is kept in, which signs in place of this account's own on this
+/// machine (`signed::own_authority`), never one beside the cluster's file;
+/// made there where none is kept; the answer is `{"text","authority"}`, the
+/// file the node is given and the certificate it checks it by, which a
+/// surface writes beside it.
 ///
 /// # Errors
-/// As [`slices`]; an argument that is not those; or the authority cannot
-/// be kept.
+/// As [`slices`]; an argument that is not those; the cluster has no name
+/// and no folder is named; or the authority cannot be kept.
 pub fn signed_slice(cluster: &str, argument: &str) -> Result<String, String> {
     #[derive(serde::Deserialize)]
     struct Asked {
-        cluster: String,
         node: String,
         name: Option<String>,
         authority: Option<String>,
     }
     let asked: Asked = serde_json::from_str(argument)
-        .map_err(|error| format!("the argument is not {{\"cluster\",\"node\"}}: {error}"))?;
+        .map_err(|error| format!("the argument is not {{\"node\"}}: {error}"))?;
     if document_kind(cluster) == DocumentKind::Node {
         return Err(NOT_A_CLUSTER.to_string());
     }
-    let path = std::path::Path::new(&asked.cluster);
     let kept = asked.authority.as_deref().map(std::path::Path::new);
-    let text =
-        runtime::signed::sliced_signed(cluster, path, &asked.node, asked.name.as_deref(), kept)?;
-    let place = kept.map_or_else(
-        || {
-            path.parent()
-                .unwrap_or_else(|| std::path::Path::new("."))
-                .join(runtime::signed::AUTHORITY)
-        },
-        std::path::Path::to_path_buf,
-    );
+    let (text, place) =
+        runtime::signed::sliced_signed(cluster, &asked.node, asked.name.as_deref(), kept)?;
     let authority = std::fs::read_to_string(place.join(provision::issuer::CERTIFICATE))
         .map_err(|error| format!("the cluster's authority at {}: {error}", place.display()))?;
     json(&serde_json::json!({ "text": text, "authority": authority }))
@@ -269,7 +260,6 @@ mod tests {
         let node = test.node(0).name.clone();
         let cluster = format!("{CLUSTER}\n[nodes.{node}]\n");
         let argument = serde_json::json!({
-            "cluster": own.join("cluster.xmip").display().to_string(),
             "node": node,
             "name": test.name,
             "authority": kept.display().to_string(),
