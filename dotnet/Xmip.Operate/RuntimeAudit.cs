@@ -233,8 +233,7 @@ public sealed class RuntimeAudit
             Text(record, "message"),
             Text(record, "summary") ?? string.Empty,
             Texts(record.GetProperty("scope")),
-            Texts(record.GetProperty("properties")),
-            Flag(record, "hidden"));
+            Texts(record.GetProperty("properties")));
     }
 
     private static AuditGroup Group(JsonElement group)
@@ -245,8 +244,7 @@ public sealed class RuntimeAudit
             group.GetProperty("count").GetInt32(),
             group.GetProperty("warnings").GetInt32(),
             group.GetProperty("errors").GetInt32(),
-            Text(group, "latest") ?? string.Empty,
-            Flag(group, "hidden"));
+            Text(group, "latest") ?? string.Empty);
     }
 
     private static AuditChain Chain(JsonElement chain)

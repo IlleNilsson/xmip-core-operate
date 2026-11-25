@@ -28,23 +28,6 @@ public sealed partial class RuntimeRules
         return Pair(_matches, candidate, pattern);
     }
 
-    /// <summary>Whether what a run made — its cluster, its audit records — is
-    /// shown to a reader: always where the run declared nothing, and where it
-    /// declared itself <paramref name="hidden"/> only when the reader is
-    /// <paramref name="includingHidden"/> — <c>observe::run::shown</c>
-    /// (ADR-0028 and ADR-0052, amendments 2026-09-30).</summary>
-    public bool Shown(bool hidden, bool includingHidden)
-    {
-        byte shown = 0;
-
-        unsafe
-        {
-            Check(_shown((byte)(hidden ? 1 : 0), (byte)(includingHidden ? 1 : 0), &shown));
-        }
-
-        return shown != 0;
-    }
-
     // Two strings in, a yes or a no out: the shape containment and the
     // wildcard share.
     private static bool Pair(

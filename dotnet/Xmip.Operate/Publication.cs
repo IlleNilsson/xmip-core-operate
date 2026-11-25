@@ -45,8 +45,6 @@ public sealed record Publication(
 /// with, as <c>node::Capability::declared_entry</c> writes them,
 /// <c>&lt;node&gt;=online+erp-direct</c> (ADR-0056, amendment 2026-11-24).</param>
 /// <param name="Stress">The stress level's name.</param>
-/// <param name="Hidden">The run declared itself hidden when it was started
-/// (ADR-0028, amendment 2026-09-30).</param>
 /// <param name="Real">The nodes on machines of their own, never spawned;
 /// every other node is simulated (ADR-0028, amendment 2026-10-21).</param>
 public sealed record PublishedRun(
@@ -56,5 +54,4 @@ public sealed record PublishedRun(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Capabilities,
     string Stress,
-    bool Hidden,
     IReadOnlyList<string> Real);

@@ -50,21 +50,21 @@ public sealed class ClusterSurfacesTest
 
         Assert.NotEqual(First, Second);
         Assert.Equal([First, Second], held.Clusters);
-        Assert.True(held.Several(includingHidden: false));
+        Assert.True(held.Several);
         Assert.Equal(2, held.Count);
         Assert.Equal($"2 clusters — {First}, {Second}", held.Source);
 
         // Each answers its own root and nothing else: a cluster is a whole
         // scope tree, and neither can see into the other.
         Assert.Contains(
-            held.For(First, includingHidden: false).Health(ScopeTree.Root),
+            held.For(First).Health(ScopeTree.Root),
             record => record.Scope.StartsWith($"{Cluster.Scope}/", StringComparison.Ordinal));
         Assert.DoesNotContain(
-            held.For(First, includingHidden: false).Health(ScopeTree.Root),
+            held.For(First).Health(ScopeTree.Root),
             record => record.Scope.StartsWith(
                 $"{ScopeTree.Root}{Second}/", StringComparison.Ordinal));
-        Assert.Equal(Second, held.For(Second, includingHidden: false).Run().Cluster);
-        Assert.Equal("harsh", held.For(Second, includingHidden: false).Run().Stress);
+        Assert.Equal(Second, held.For(Second).Run().Cluster);
+        Assert.Equal("harsh", held.For(Second).Run().Stress);
     }
 
     [Fact]
@@ -77,8 +77,8 @@ public sealed class ClusterSurfacesTest
             [new SnapshotOperator(Fixture("cluster.xmip")),
              new SnapshotOperator(Fixture("cluster-cl2.xmip"))]);
 
-        Assert.Equal(6UL, held.For(First, includingHidden: false).Figures(ScopeTree.Root).Streams);
-        Assert.Equal(2UL, held.For(Second, includingHidden: false).Figures(ScopeTree.Root).Streams);
+        Assert.Equal(6UL, held.For(First).Figures(ScopeTree.Root).Streams);
+        Assert.Equal(2UL, held.For(Second).Figures(ScopeTree.Root).Streams);
     }
 
     [Fact]
@@ -88,9 +88,9 @@ public sealed class ClusterSurfacesTest
             ClusterSurfaces.Over(new SnapshotOperator(Fixture("cluster.xmip")));
 
         Assert.Equal([First], held.Clusters);
-        Assert.False(held.Several(includingHidden: true));
-        Assert.Same(held.First, held.For(null, includingHidden: false));
-        Assert.Same(held.First, held.For(Second, includingHidden: false));
+        Assert.False(held.Several);
+        Assert.Same(held.First, held.For(null));
+        Assert.Same(held.First, held.For(Second));
         Assert.False(held.Holds(Second));
         Assert.True(held.Holds(First));
         Assert.Equal(held.First.Source, held.Source);
@@ -117,9 +117,9 @@ public sealed class ClusterSurfacesTest
         Assert.Equal([First, Second], held.Clusters);
         Assert.False(held.Publishing(Second));
         Assert.True(held.Publishing(First));
-        Assert.Empty(held.For(Second, includingHidden: false).Health(ScopeTree.Root));
+        Assert.Empty(held.For(Second).Health(ScopeTree.Root));
         Assert.Contains(
-            "no file at", held.For(Second, includingHidden: false).Source,
+            "no file at", held.For(Second).Source,
             StringComparison.Ordinal);
     }
 
@@ -210,91 +210,8 @@ public sealed class ClusterSurfacesTest
 
         using ClusterSurfaces held = SurfaceChoice.OpenAll(local.Configuration, local.Directory);
 
-        Assert.False(held.Several(includingHidden: true));
+        Assert.False(held.Several);
         Assert.IsType<LocalOperator>(held.First);
-    }
-
-    [Fact]
-    public void AClusterWhoseRunDeclaredItselfHiddenIsListedOnlyWhenAsked()
-    {
-        // The owner, 2026-09-29: a test cluster must be hidable in the
-        // operation tools. Hiding is by what the run declared, never by the
-        // cluster's name (ADR-0028 and ADR-0052, amendments 2026-09-30).
-        using Hidden test = new(hidden: true);
-        using ClusterSurfaces held = ClusterSurfaces.Over(
-            [new SnapshotOperator(Fixture("cluster.xmip")), new SnapshotOperator(test.Path)]);
-
-        Assert.Equal([First, Second], held.Clusters);
-        Assert.Equal([First], held.Listed(includingHidden: false));
-        Assert.Equal([First, Second], held.Listed(includingHidden: true));
-        Assert.False(held.Several(includingHidden: false));
-        Assert.True(held.Several(includingHidden: true));
-        Assert.True(held.Hidden(Second));
-        Assert.False(held.Hidden(First));
-        Assert.True(held.AnyHidden);
-
-        // Asked for the hidden one without including it, a face is on the
-        // first shown; including it, on the hidden one itself.
-        Assert.Equal(First, held.Showing(Second, includingHidden: false));
-        Assert.Equal(First, held.For(Second, includingHidden: false).Run().Cluster);
-        Assert.Equal(Second, held.Showing(Second, includingHidden: true));
-        Assert.True(held.For(Second, includingHidden: true).Run().Hidden);
-        Assert.Contains("hidden test run", held.For(Second, includingHidden: true).Run().Line(),
-            StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void AClusterWhoseRunDeclaredNothingIsShownLikeAnyOther()
-    {
-        using Hidden named = new(hidden: false);
-        using ClusterSurfaces held = ClusterSurfaces.Over(
-            [new SnapshotOperator(Fixture("cluster.xmip")), new SnapshotOperator(named.Path)]);
-
-        Assert.Equal([First, Second], held.Listed(includingHidden: false));
-        Assert.False(held.AnyHidden);
-        Assert.Equal(Second, held.Showing(Second, includingHidden: false));
-    }
-
-    [Fact]
-    public void AFaceHoldingOnlyHiddenClustersShowsNothingAndSaysWhy()
-    {
-        using Hidden test = new(hidden: true);
-        using ClusterSurfaces held = ClusterSurfaces.Over(new SnapshotOperator(test.Path));
-
-        Assert.Empty(held.Listed(includingHidden: false));
-        Assert.Equal(string.Empty, held.Showing(null, includingHidden: false));
-        IOperatorSurface withheld = held.For(null, includingHidden: false);
-        Assert.Empty(withheld.Health(ScopeTree.Root));
-        Assert.Contains("show test clusters", withheld.Source, StringComparison.Ordinal);
-        Assert.Equal(Second, held.Showing(null, includingHidden: true));
-    }
-
-    /// <summary>The second cluster's fixture, its run hidden or not, in a
-    /// file of its own.</summary>
-    private sealed class Hidden : IDisposable
-    {
-        private readonly TestFolder folder = new("hidden");
-
-        public Hidden(bool hidden)
-        {
-            Path = folder.Inside("hidden.xmip");
-            string text = File.ReadAllText(Fixture("cluster-cl2.xmip"));
-
-            if (hidden)
-            {
-                text = text.Replace(
-                    "\n[run]\n", "\n[run]\nhidden = true\n", StringComparison.Ordinal);
-            }
-
-            File.WriteAllText(Path, text);
-        }
-
-        public string Path { get; }
-
-        public void Dispose()
-        {
-            folder.Dispose();
-        }
     }
 
     /// <summary>A surface over records and nothing else, for naming alone.</summary>

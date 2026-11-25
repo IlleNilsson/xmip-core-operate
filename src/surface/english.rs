@@ -103,12 +103,6 @@ pub const NO_AUDIT_DIRECTORY: &str = "No audit directory is stated — neither \
     Xmip:AuditDirectory in this program's configuration nor XMIP_AUDIT_DIRECTORY — so its \
     records go to the operating system's log, and there is no audit here to read.";
 
-/// What follows a hidden run's record or group: ` · test`, else nothing.
-#[must_use]
-pub const fn test(hidden: bool) -> &'static str {
-    if hidden { " · test" } else { "" }
-}
-
 /// An RFC 3339 time without its fractional seconds, its zone kept.
 #[must_use]
 pub fn to_the_second(at: &str) -> String {

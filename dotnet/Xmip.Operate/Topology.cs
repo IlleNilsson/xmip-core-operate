@@ -11,7 +11,10 @@ namespace Xmip.Operate;
 /// cluster says the <paramref name="Roles"/> it declares, comma separated, empty
 /// for none and for anything that is no node; a Storage node listed in
 /// <c>[storage] nodes</c> its <paramref name="Place"/> there, from zero, null for
-/// anything else (ADR-0052 and ADR-0056, amendments 2026-11-13).
+/// anything else (ADR-0052 and ADR-0056, amendments 2026-11-13); and a Storage
+/// node of several its <paramref name="Standing"/> as it reports itself running,
+/// in the runtime's words — <c>Storage, standby</c> — empty for anything else
+/// (<c>observe::topology::StorageStanding</c>; amendment 2026-11-25).
 /// </summary>
 public sealed record TopologyNode(
     string Id,
@@ -25,7 +28,8 @@ public sealed record TopologyNode(
     double Activity,
     string Evidence,
     string Roles = "",
-    int? Place = null);
+    int? Place = null,
+    string Standing = "");
 
 /// <summary>
 /// One semantic communication relationship. Transport acknowledgements are not

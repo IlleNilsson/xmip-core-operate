@@ -114,7 +114,7 @@ public sealed class MessageSurfaceTest : IDisposable
 
         Assert.Equal(SnapshotOperator.NotActed, taken.Result);
         IReadOnlyList<AuditEntry> audited = audit
-            .Read(new AuditQuery { Order = "ascending", IncludeHidden = true }).Records;
+            .Read(new AuditQuery { Order = "ascending" }).Records;
         Assert.Contains(audited, record => record.Message?.StartsWith(
             $"{Me} asked to retry", StringComparison.Ordinal) == true);
         Assert.DoesNotContain(audited, record => record.Message?.Contains(

@@ -52,7 +52,6 @@ public sealed partial class RuntimeRules
 
     private readonly delegate* unmanaged[Cdecl]<XmipStr, XmipStr, byte*, int> _contains;
     private readonly delegate* unmanaged[Cdecl]<XmipStr, XmipStr, byte*, int> _matches;
-    private readonly delegate* unmanaged[Cdecl]<byte, byte, byte*, int> _shown;
     private readonly delegate* unmanaged[Cdecl]<XmipStr, XmipStr*, nuint, nuint*, int> _parts;
     private readonly delegate* unmanaged[Cdecl]<XmipStr, XmipStr*, XmipStr*, int> _node;
     private readonly delegate* unmanaged[Cdecl]<
@@ -86,8 +85,6 @@ public sealed partial class RuntimeRules
             Export(library, OperateAbi.ScopeContainsEntrypoint);
         _matches = (delegate* unmanaged[Cdecl]<XmipStr, XmipStr, byte*, int>)
             Export(library, OperateAbi.ScopeMatchesEntrypoint);
-        _shown = (delegate* unmanaged[Cdecl]<byte, byte, byte*, int>)
-            Export(library, OperateAbi.RunShownEntrypoint);
         _parts = (delegate* unmanaged[Cdecl]<XmipStr, XmipStr*, nuint, nuint*, int>)
             Export(library, OperateAbi.ScopePartsEntrypoint);
         _node = (delegate* unmanaged[Cdecl]<XmipStr, XmipStr*, XmipStr*, int>)
@@ -210,7 +207,6 @@ public sealed partial class RuntimeRules
         .. RuntimeWords.Entrypoints,
         OperateAbi.ScopeContainsEntrypoint,
         OperateAbi.ScopeMatchesEntrypoint,
-        OperateAbi.RunShownEntrypoint,
         OperateAbi.ScopePartsEntrypoint,
         OperateAbi.ScopeNodeEntrypoint,
         OperateAbi.StageWordsEntrypoint,

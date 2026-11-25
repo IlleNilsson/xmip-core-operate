@@ -94,6 +94,7 @@ impl Read {
                     place: node
                         .place
                         .map_or(-1, |at| i32::try_from(at).unwrap_or(i32::MAX)),
+                    standing: node.standing.map_or(Str::empty(), |at| borrow(at.name())),
                 });
                 let links = topology.links.iter().map(|link| Link {
                     id: borrow(&link.id),
@@ -142,7 +143,6 @@ impl Read {
             has_run: u8::from(run.is_some()),
             cluster: run.map_or(Str::empty(), |run| borrow(&run.cluster)),
             stress: run.map_or(Str::empty(), |run| borrow(&run.stress)),
-            hidden: u8::from(run.is_some_and(|run| run.hidden)),
             has_topology: u8::from(topology.is_some()),
             topology_source: topology.map_or(Str::empty(), |drawn| borrow(&drawn.source)),
             topology_observed_unix_nanos: topology.map_or(0, |drawn| drawn.observed_unix_nanos),
@@ -453,6 +453,7 @@ parent = "cluster"
 kind = "node"
 roles = "storage"
 place = 1
+standing = "standby"
 
 [[topology.links]]
 id = "handoff/{first}/{second}"
@@ -539,7 +540,6 @@ attempts = 2
             has_run: 9,
             cluster: Str::empty(),
             stress: Str::empty(),
-            hidden: 9,
             has_topology: 9,
             topology_source: Str::empty(),
             topology_observed_unix_nanos: 0,
@@ -551,7 +551,6 @@ attempts = 2
         );
         assert_eq!(text(head.node), cluster.scope());
         assert_eq!((head.has_run, text(head.stress)), (1, "harsh".to_string()));
-        assert_eq!(head.hidden, 0, "the roll declared nothing");
         assert_eq!(
             (head.has_topology, head.topology_observed_unix_nanos),
             (1, 5)
@@ -598,6 +597,7 @@ attempts = 2
             evidence: Str::empty(),
             roles: Str::empty(),
             place: -9,
+            standing: Str::empty(),
         };
         let nodes = listed(handle, xmip_publication_nodes_v1, blank);
         assert_eq!(
@@ -610,6 +610,11 @@ attempts = 2
             (text(nodes[1].roles), nodes[1].place),
             ("storage".to_string(), 1),
             "a Storage node says its roles and its place in [storage] nodes"
+        );
+        assert_eq!(
+            (text(nodes[0].standing), text(nodes[1].standing)),
+            (String::new(), "Storage, standby".to_string()),
+            "and where it stands as it reports itself running (amendment 2026-11-25)"
         );
 
         let unlinked = Link {

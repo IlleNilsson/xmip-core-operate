@@ -16,15 +16,6 @@ namespace Xmip.Surface;
 /// </remarks>
 public sealed record AuditQuery
 {
-    /// <summary>The word the audit capability, and every address that
-    /// reproduces a view, carries the choice to include what is hidden
-    /// under.</summary>
-    public const string HiddenKey = "hidden";
-
-    /// <summary>What <see cref="HiddenKey"/> says when what is hidden is
-    /// included; unsaid, it is left out.</summary>
-    public const string Included = "include";
-
     /// <summary>The scope pattern, <c>*</c> and <c>?</c>, over each record's
     /// location; a record with none is at the root, which only <c>*</c>
     /// names.</summary>
@@ -72,11 +63,6 @@ public sealed record AuditQuery
     /// <summary>How long a page; 0 is the capability's default.</summary>
     public int Limit { get; init; }
 
-    /// <summary>Whether the records of a run that declared itself hidden are
-    /// read too — an assistant's test run (ADR-0028, amendment 2026-09-30);
-    /// left out unless asked. Carried as <c>hidden=include</c>.</summary>
-    public bool IncludeHidden { get; init; }
-
     /// <summary>Whether the audit chain of each writer of the records matched
     /// is walked whole and its verdict said (ADR-0070 clause 5): the verify
     /// act, which reads no payload. Carried as <c>verify=yes</c>.</summary>
@@ -119,7 +105,6 @@ public sealed record AuditQuery
         yield return ("order", Order);
         yield return ("offset", Offset > 0 ? $"{Offset}" : null);
         yield return ("limit", Limit > 0 ? $"{Limit}" : null);
-        yield return (HiddenKey, IncludeHidden ? Included : null);
         yield return ("verify", Verify ? "yes" : null);
     }
 }

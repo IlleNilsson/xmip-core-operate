@@ -18,6 +18,17 @@ public static partial class English
         return RuntimeLibrary.Rules.Publications.Words(kind)?.Name ?? "unknown";
     }
 
+    /// <summary>What a drawn thing says beneath its label: a Storage node of
+    /// several where it stands among them as it reports itself running —
+    /// <c>Storage, standby</c>, the runtime's words — and anything else its
+    /// kind (the owner, 2026-11-25: <i>Also the DS2 standby node is not
+    /// shown</i>; ADR-0052, amendment 2026-11-25).</summary>
+    public static string Kind(TopologyNode node)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        return node.Standing.Length > 0 ? node.Standing : Name(node.Kind);
+    }
+
     /// <summary>What a person reads an origin as — <c>configured and
     /// observed</c> — <c>observe::Origin::name</c>, called in the
     /// runtime.</summary>

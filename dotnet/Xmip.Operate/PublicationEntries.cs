@@ -55,7 +55,8 @@ internal static class PublicationEntries
                 entry.Activity,
                 entry.Evidence.Read(),
                 entry.Roles.Read(),
-                entry.Place >= 0 ? entry.Place : null);
+                entry.Place >= 0 ? entry.Place : null,
+                entry.Standing.Read());
         }
     }
 

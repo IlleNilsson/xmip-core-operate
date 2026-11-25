@@ -84,7 +84,7 @@ public sealed partial class RuntimeWords
         _listWords = (delegate* unmanaged[Cdecl]<int, XmipStr, XmipStr, byte*, nuint, nuint*, int>)
             Export(library, OperateAbi.ListWordsEntrypoint);
 
-        _phrases = [.. Enumerable.Range(0, 4).Select(at => Word(_phrase, at))];
+        _phrases = [.. Enumerable.Range(0, 3).Select(at => Word(_phrase, at))];
         _actWords = [.. Enumerable.Range(0, 6).Select(at => Word(_actWord, at))];
         _outcomeWords =
         [

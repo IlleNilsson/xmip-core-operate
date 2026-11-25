@@ -10,10 +10,7 @@ namespace Xmip.Surface;
 /// them declared, and how hard. The owner, 2026-09-19: the run says
 /// what it was started with — a board could not be told from the one before
 /// it. A publication with no such table is <see cref="None"/>, and a surface
-/// shows nothing for it. <see cref="Hidden"/> is what the run declared of
-/// itself when it was started (ADR-0028, amendment 2026-09-30): an assistant's
-/// test run, which a view leaves out until asked to show it. <see cref="Real"/>
-/// are the nodes on machines of their own, never spawned, and every other
+/// shows nothing for it. <see cref="Real"/> are the nodes on machines of their own, never spawned, and every other
 /// node is simulated (ADR-0028, amendment 2026-10-21): a green board means
 /// two different things in the two cases, and the line says which. Whether
 /// it said anything, its line and what it started each node with are the
@@ -27,7 +24,6 @@ public sealed record RunHeader(
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Capabilities,
     string Stress,
-    bool Hidden = false,
     IReadOnlyList<string>? Real = null)
 {
     /// <summary>What a publication that says nothing of its run is read as.</summary>
@@ -110,7 +106,7 @@ public sealed record RunHeader(
             ? None
             : new RunHeader(
                 run.Cluster, run.Tests, run.Nodes, run.Roles, run.Capabilities, run.Stress,
-                run.Hidden, run.Real);
+                run.Real);
     }
 
     // The runtime's answer, asked once per record: a record does not change,
@@ -134,7 +130,6 @@ public sealed record RunHeader(
             Write(writer, "capabilities", Capabilities);
             Write(writer, "real", RealNodes);
             writer.WriteString("stress", Stress);
-            writer.WriteBoolean("hidden", Hidden);
         });
 
         using JsonDocument said = JsonDocument.Parse(RuntimeLibrary.Rules.Sentences.RunSaid(run));

@@ -155,15 +155,6 @@ public static partial class English
         return Words.Phrase(OperateAbi.Phrase.NoAuditDirectory);
     }
 
-    /// <summary>What follows the name of a cluster, a group or a record whose
-    /// run declared itself hidden, where a reader asked to see it: " · test",
-    /// in words and never by color alone (ADR-0052, amendment 2026-09-30);
-    /// nothing for everything else.</summary>
-    public static string Test(bool hidden)
-    {
-        return hidden ? Words.Phrase(OperateAbi.Phrase.TestMark) : string.Empty;
-    }
-
     /// <summary>A record's time as written (<see cref="AuditEntry.At"/>, RFC
     /// 3339 to the nanosecond) to the second, its zone kept: what a table's
     /// column shows, where the fraction would only widen it.</summary>

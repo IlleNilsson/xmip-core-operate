@@ -82,17 +82,6 @@ public sealed class RuntimeRulesTest
         Assert.Equal(matches, Rules.Matches(candidate, pattern));
     }
 
-    [Theory]
-    [InlineData(false, false, true)]
-    [InlineData(false, true, true)]
-    [InlineData(true, false, false)]
-    [InlineData(true, true, true)]
-    public void AHiddenRunIsShownOnlyWhenTheReaderIncludesIt(
-        bool hidden, bool includingHidden, bool shown)
-    {
-        Assert.Equal(shown, Rules.Shown(hidden, includingHidden));
-    }
-
     [Fact]
     public void PartsComeBackAsTheSegmentsTopFirst()
     {

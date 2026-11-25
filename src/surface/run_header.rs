@@ -55,7 +55,7 @@ impl RunHeader {
     }
 
     /// The one line: tests, cluster, nodes as each declared, their Node
-    /// capabilities, real, stress and hidden, joined by ` · `; empty where
+    /// capabilities, real and stress, joined by ` · `; empty where
     /// nothing was said.
     #[must_use]
     pub fn line(&self) -> String {
@@ -88,9 +88,6 @@ impl RunHeader {
         }
         if !run.stress.is_empty() {
             parts.push(run.stress.clone());
-        }
-        if run.hidden {
-            parts.push("hidden test run".to_string());
         }
 
         parts.join(" · ")

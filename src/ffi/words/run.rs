@@ -12,8 +12,8 @@ use crate::surface::node_capability::NodeCapability;
 use crate::surface::run_header::RunHeader;
 
 /// `xmip_run_said_v1`: the run `input` says — `observe::Run`'s JSON,
-/// `cluster`, `tests`, `nodes`, `roles`, `capabilities`, `real`, `stress`,
-/// `hidden` — as `{"said", "line", "started": [{"node", "roles",
+/// `cluster`, `tests`, `nodes`, `roles`, `capabilities`, `real`,
+/// `stress` — as `{"said", "line", "started": [{"node", "roles",
 /// "capabilities", "refusal"}]}`, one started node for each of its roles'
 /// entries.
 ///

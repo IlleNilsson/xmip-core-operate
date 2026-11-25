@@ -88,7 +88,7 @@ public sealed class ClusterSnapshotTest
             $"Filing · {Cluster.Name} · nodes {Receiver} · no Node capability · real {Receiver}, "
                 + "the rest simulated · harsh",
             new RunHeader(
-                Cluster.Name, ["Filing"], [Receiver], [], [], "harsh", false, [Receiver])
+                Cluster.Name, ["Filing"], [Receiver], [], [], "harsh", [Receiver])
                 .Line());
     }
 

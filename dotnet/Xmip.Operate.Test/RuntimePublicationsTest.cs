@@ -52,7 +52,6 @@ public sealed class RuntimePublicationsTest
             nodes = ["{{Receiver}}", "{{Wide}}"]
             roles = ["{{Receiver}}=receiving"]
             stress = "harsh"
-            hidden = true
 
             [topology]
             observed_unix_nanos = 5
@@ -87,7 +86,6 @@ public sealed class RuntimePublicationsTest
         Assert.Equal([Receiver, Wide], read.Run.Nodes);
         Assert.Empty(read.Run.Tests);
         Assert.Equal("harsh", read.Run.Stress);
-        Assert.True(read.Run.Hidden);
 
         Assert.NotNull(read.Topology);
         TopologyNode cluster = Assert.Single(read.Topology.Nodes);

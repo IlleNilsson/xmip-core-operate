@@ -91,7 +91,6 @@ public sealed partial class PublicationReader
                 Listed(handle, RunList.Roles),
                 Listed(handle, RunList.Capabilities),
                 head.Stress.Read(),
-                head.Hidden != 0,
                 Listed(handle, RunList.Real));
         }
     }

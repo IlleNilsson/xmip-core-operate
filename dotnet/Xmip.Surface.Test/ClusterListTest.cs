@@ -45,8 +45,8 @@ public sealed class ClusterListTest
         // refused with nothing; the snapshot names its cluster.
         Assert.Equal(2, held.Count);
         Assert.Equal([string.Empty, Cluster.Name], held.Clusters);
-        Assert.IsType<LocalOperator>(held.For(string.Empty, includingHidden: false));
-        Assert.IsType<SnapshotOperator>(held.For(Cluster.Name, includingHidden: false));
+        Assert.IsType<LocalOperator>(held.For(string.Empty));
+        Assert.IsType<SnapshotOperator>(held.For(Cluster.Name));
     }
 
     [Fact]
@@ -108,7 +108,7 @@ public sealed class ClusterListTest
 
         Assert.Equal([Second, Cluster.Name], held.Clusters);
         Assert.True(held.Publishing(Second));
-        Assert.Equal(Second, held.For(Second, includingHidden: false).Run().Cluster);
+        Assert.Equal(Second, held.For(Second).Run().Cluster);
     }
 
     [Fact]

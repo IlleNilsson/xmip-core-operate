@@ -25,7 +25,6 @@ pub unsafe extern "C" fn xmip_phrase_v1(which: i32, out: *mut Str) -> i32 {
         let said = match which {
             phrase::NOTHING_RECORDED => english::mood_or_nothing(None),
             phrase::NO_AUDIT_DIRECTORY => english::NO_AUDIT_DIRECTORY,
-            phrase::TEST_MARK => english::test(true),
             phrase::NO_WORK_PROCESS => english::NO_WORK_PROCESS,
             _ => return status::INVALID,
         };
