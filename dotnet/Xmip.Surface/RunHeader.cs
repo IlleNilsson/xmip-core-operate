@@ -10,8 +10,9 @@ namespace Xmip.Surface;
 /// them declared, and how hard. The owner, 2026-09-19: the run says
 /// what it was started with — a board could not be told from the one before
 /// it. A publication with no such table is <see cref="None"/>, and a surface
-/// shows nothing for it. <see cref="Real"/> are the nodes on machines of their own, never spawned, and every other
-/// node is simulated (ADR-0028, amendment 2026-10-21): a green board means
+/// shows nothing for it. <see cref="Real"/> are the nodes on machines of
+/// their own, never spawned, and every other node is simulated (ADR-0028,
+/// amendment 2026-10-21): a green board means
 /// two different things in the two cases, and the line says which. Whether
 /// it said anything, its line and what it started each node with are the
 /// runtime's (<c>operate::surface::run_header</c>, asked through
