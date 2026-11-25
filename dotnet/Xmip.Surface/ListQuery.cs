@@ -16,8 +16,9 @@ internal static class ListQuery
 {
     // What a list that does not change was asked, by the question, kept as
     // long as the list: a publication's list is read once and asked again by
-    // every render over it, so each question crosses once a publication.
-    private static readonly ConditionalWeakTable<object, ConcurrentDictionary<string, int[]>>
+    // every render over it, so each question crosses once a publication. A
+    // list's answer has one form, so the list and the question key it.
+    private static readonly ConditionalWeakTable<object, ConcurrentDictionary<string, object>>
         Answered = [];
 
     /// <summary>
@@ -37,25 +38,42 @@ internal static class ListQuery
         Action<Utf8JsonWriter> query)
     {
         T[] given = [.. entries];
-        string asked = $"{list}{JsonText.Document(query)}";
-        int[] places = entries is IReadOnlyList<T> and not ICollection<T> { IsReadOnly: false }
-            ? Answered.GetOrCreateValue(entries)
-                .GetOrAdd(asked, _ => Placed(list, given, key, write, query))
-            : Placed(list, given, key, write, query);
+        int[] places = Answer<T, int[]>(
+            list, (entries, given), (key, write), query, answer => [.. Places(answer, "places")]);
 
         return [.. places.Select(at => given[at])];
     }
 
-    // The places the runtime chose of the list, in its order.
-    private static int[] Placed<T>(
+    /// <summary>
+    /// The runtime's answer to <paramref name="query"/> over the list
+    /// <paramref name="list"/>, read by <paramref name="read"/>: the entries
+    /// as given, and as one array to write; each written under its key by its
+    /// writer. A list that cannot change — a publication's — is asked each
+    /// question once.
+    /// </summary>
+    /// <exception cref="ArgumentException">REFUSED: what the runtime refused
+    /// of the query.</exception>
+    public static TRead Answer<T, TRead>(
         int list,
-        T[] given,
-        string key,
-        Action<Utf8JsonWriter, T> write,
-        Action<Utf8JsonWriter> query)
+        (IEnumerable<T> Entries, T[] Given) listed,
+        (string Key, Action<Utf8JsonWriter, T> Write) written,
+        Action<Utf8JsonWriter> query,
+        Func<JsonElement, TRead> read)
+        where TRead : class
     {
-        using JsonDocument answer = Asked(list, Listed(given, key, write), query);
-        return [.. Places(answer.RootElement, "places")];
+        string asked = $"{list}{JsonText.Document(query)}";
+
+        return listed.Entries is IReadOnlyList<T> and not ICollection<T> { IsReadOnly: false }
+            ? (TRead)Answered.GetOrCreateValue(listed.Entries).GetOrAdd(asked, _ => Read())
+            : Read();
+
+        // The answer read whole before its document is let go.
+        TRead Read()
+        {
+            using JsonDocument answer = Asked(
+                list, Listed(listed.Given, written.Key, written.Write), query);
+            return read(answer.RootElement);
+        }
     }
 
     /// <summary>The list written as its section's JSON: <c>{"key": [...]}</c>.</summary>

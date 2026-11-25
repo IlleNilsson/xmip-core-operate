@@ -58,6 +58,13 @@ public sealed partial class RuntimeRules
     public RuntimeMessages Messages =>
         field ?? throw RemoteBuild.Refused(_library, RuntimeMessages.Entrypoints);
 
+    /// <summary>Section 29: the Instances of each Work Process of the nodes
+    /// running in this process, read from the Ledger, and the Messages that
+    /// failed in its queue (runtime-model.md section 22; ADR-0066, amendment
+    /// 2026-11-25).</summary>
+    public RuntimeInstances Instances =>
+        field ?? throw RemoteBuild.Refused(_library, RuntimeInstances.Entrypoints);
+
     /// <summary>Section 17: a node reached at its operate address over gRPC
     /// inside Xmip's mutual TLS, and this process's node served on an operate
     /// listener of its own (ADR-0014, amendment 2026-10-12).</summary>

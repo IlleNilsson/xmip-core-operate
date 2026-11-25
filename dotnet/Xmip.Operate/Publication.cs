@@ -22,6 +22,9 @@ namespace Xmip.Operate;
 /// <param name="FailedMessages">The Messages that failed at its nodes' Send
 /// Ports, how many at each and the oldest (runtime-model.md section
 /// 13).</param>
+/// <param name="WorkProcessInstances">The Instances of the Work Processes its
+/// nodes run, the newest of each, and the Messages that failed in each one's
+/// queue (runtime-model.md section 22; ADR-0066, amendment 2026-11-25).</param>
 public sealed record Publication(
     string Source,
     string Node,
@@ -32,7 +35,8 @@ public sealed record Publication(
     SubscriptionList Subscriptions,
     EventSubscriptionList EventSubscriptions,
     DeadMessageList DeadMessages,
-    FailedMessageList FailedMessages);
+    FailedMessageList FailedMessages,
+    WorkProcessInstanceList WorkProcessInstances);
 
 /// <summary>What a run was started with, as a publication says it under
 /// <c>[run]</c>: <c>observe::Run</c>.</summary>

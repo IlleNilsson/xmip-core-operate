@@ -28,11 +28,13 @@ public sealed partial class PublicationReader
                 SubscriptionList.Parse(Listed(_subscriptions, handle)),
                 EventSubscriptionList.Parse(Listed(_eventSubscriptions, handle)),
                 DeadMessageList.Parse(Listed(_deadMessages, handle)),
-                FailedMessageList.Parse(Listed(_failedMessages, handle)));
+                FailedMessageList.Parse(Listed(_failedMessages, handle)),
+                WorkProcessInstanceList.Parse(Listed(_instances, handle)));
         }
     }
 
-    // Section 11's, 14's, 15's or 16's list over this handle: JSON, asked again at its length.
+    // Section 11's, 14's, 15's, 16's or 29's list over this handle: JSON, asked
+    // again at its length.
     private static ReadOnlyMemory<byte> Listed(
         delegate* unmanaged[Cdecl]<nint, byte*, nuint, nuint*, int> list, nint handle)
     {

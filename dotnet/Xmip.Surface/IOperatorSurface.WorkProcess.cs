@@ -2,8 +2,10 @@ using Xmip.Operate;
 
 namespace Xmip.Surface;
 
-// Whether a Work Process is placed: what the Work Process card says while the
-// process stage holds Subscriptions alone (ADR-0052, amendment 2026-11-11).
+// A Work Process as a surface reads it: whether one is placed, what the Work
+// Process card says while the process stage holds Subscriptions alone
+// (ADR-0052, amendment 2026-11-11); and its Instances (ADR-0066, amendment
+// 2026-11-25).
 public partial interface IOperatorSurface
 {
     /// <summary>
@@ -32,5 +34,18 @@ public partial interface IOperatorSurface
         ];
 
         return configured.Count > 0 && configured.All(subscriptions.Contains);
+    }
+
+    /// <summary>
+    /// The Instances of each Work Process the nodes this surface reads run —
+    /// the newest of each its node knows, running, waiting, failed, dismissed
+    /// or completed, with their values and history — and the Messages that
+    /// failed in each one's queue, each retried or dismissed as every failed
+    /// Message is (runtime-model.md section 22; ADR-0066, amendment
+    /// 2026-11-25). None where this surface cannot list them.
+    /// </summary>
+    public WorkProcessInstanceList WorkProcessInstances()
+    {
+        return WorkProcessInstanceList.Empty;
     }
 }

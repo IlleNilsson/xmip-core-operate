@@ -200,6 +200,16 @@ rather than throwing. The evidence a Send
 Port publishes is read in one place each: the last Message that ever failed
 there by `MessageOperation.FailedIn`, how many wait in its queue now by
 `MessageOperation.FailingIn`.
+Section 29 — a Work Process's Instances (runtime-model.md section 22;
+ADR-0066, amendment 2026-11-25) — is `ffi::instance`: `xmip_instances_v1`
+the Instances of each Work Process of the nodes running in the process, read
+from the Ledger through `runtime::work_step::WorkStep::instances`, and
+`xmip_publication_instances_v1` what a read publication carries; every
+surface chooses among them by the one query, `surface::instance_query`
+(`InstanceQuery`: where, the Work Process, one Instance), which the CLI asks
+directly and .NET through section 28's list query, `XMIP_LIST_INSTANCES`;
+`OperatorSurface::work_process_instances` answers a publication's. A Message
+that failed at a Work Process takes section 16's acts.
 Section 17 — a node reached at its operate listener (ADR-0014, amendments
 2026-10-12 and 2026-10-13) — is `RuntimeRules.Remotes` (`RuntimeRemotes`):
 `Open` gives a `RemoteNode` over `host:port` with PEM certificate, key and

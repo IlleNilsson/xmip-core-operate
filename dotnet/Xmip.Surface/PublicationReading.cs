@@ -15,7 +15,8 @@ internal sealed record PublicationReading(
     string Root,
     SubscriptionList Subscriptions,
     EventSubscriptionList EventSubscriptions,
-    DeadMessageList DeadMessages)
+    DeadMessageList DeadMessages,
+    WorkProcessInstanceList WorkProcessInstances)
 {
     /// <summary>Who published, in the publication's own words: a gathered
     /// view's <c>&lt;cluster&gt;, gathered by &lt;node&gt;</c> line among them.
@@ -49,7 +50,8 @@ internal sealed record PublicationReading(
             ScopeTree.Root,
             SubscriptionList.Empty,
             EventSubscriptionList.Empty,
-            DeadMessageList.Empty);
+            DeadMessageList.Empty,
+            WorkProcessInstanceList.Empty);
     }
 
     /// <summary>
@@ -71,7 +73,8 @@ internal sealed record PublicationReading(
             read.Root,
             copied.Subscriptions,
             copied.EventSubscriptions,
-            copied.DeadMessages)
+            copied.DeadMessages,
+            copied.WorkProcessInstances)
         {
             Said = read.Said,
         };

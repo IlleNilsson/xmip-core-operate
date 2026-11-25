@@ -73,8 +73,9 @@ public sealed record DeadMessageList(IReadOnlyList<DeadMessageRecord> DeadMessag
             Pairs(entry.GetProperty("declines")));
     }
 
-    // An array of [name, value] pairs, in the order written.
-    private static KeyValuePair<string, string>[] Pairs(JsonElement pairs)
+    // An array of [name, value] pairs, in the order written: the one reader
+    // of the pairs sections 15 and 29 write.
+    internal static KeyValuePair<string, string>[] Pairs(JsonElement pairs)
     {
         return
         [

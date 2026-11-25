@@ -187,7 +187,8 @@ pub fn on_node(scope: &str, journey: &str, act: &str) -> Result<String, String> 
 
     if node.is_empty() {
         Err(format!(
-            "REFUSED: {scope} is on no node; name the node that sends the Message's Send Port, \
+            "REFUSED: {scope} is on no node; name the node that sends the Message's Send Port or \
+             runs its Work Process, \
              or the Send Port's scope beneath it"
         ))
     } else {

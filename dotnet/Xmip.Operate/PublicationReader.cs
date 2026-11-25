@@ -48,6 +48,7 @@ public sealed partial class PublicationReader
         _eventSubscriptions;
     private readonly delegate* unmanaged[Cdecl]<nint, byte*, nuint, nuint*, int> _deadMessages;
     private readonly delegate* unmanaged[Cdecl]<nint, byte*, nuint, nuint*, int> _failedMessages;
+    private readonly delegate* unmanaged[Cdecl]<nint, byte*, nuint, nuint*, int> _instances;
     private readonly delegate* unmanaged[Cdecl]<nint, XmipStr, byte*, nuint, nuint*, int>
         _fromTo;
 
@@ -94,6 +95,8 @@ public sealed partial class PublicationReader
             NativeLibrary.GetExport(library, OperateAbi.PublicationDeadMessagesEntrypoint);
         _failedMessages = (delegate* unmanaged[Cdecl]<nint, byte*, nuint, nuint*, int>)
             NativeLibrary.GetExport(library, OperateAbi.PublicationFailedMessagesEntrypoint);
+        _instances = (delegate* unmanaged[Cdecl]<nint, byte*, nuint, nuint*, int>)
+            NativeLibrary.GetExport(library, OperateAbi.PublicationInstancesEntrypoint);
         _fromTo = (delegate* unmanaged[Cdecl]<nint, XmipStr, byte*, nuint, nuint*, int>)
             NativeLibrary.GetExport(library, OperateAbi.PublicationFromToEntrypoint);
     }
@@ -121,6 +124,7 @@ public sealed partial class PublicationReader
         OperateAbi.PublicationEventSubscriptionsEntrypoint,
         OperateAbi.PublicationDeadMessagesEntrypoint,
         OperateAbi.PublicationFailedMessagesEntrypoint,
+        OperateAbi.PublicationInstancesEntrypoint,
         OperateAbi.PublicationFromToEntrypoint,
     ];
 

@@ -36,6 +36,8 @@ pub mod event;
 #[cfg(feature = "remote")]
 pub mod from_to;
 #[cfg(feature = "remote")]
+pub mod instance;
+#[cfg(feature = "remote")]
 pub mod keeper;
 #[cfg(feature = "remote")]
 pub mod layout;

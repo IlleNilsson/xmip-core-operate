@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use observe::topology::from_to::FromTo;
 use observe::{Act, Count, Counted, DeadMessage, EventSubscription, HealthRecord, Noun};
-use observe::{Subscription, Unheard};
+use observe::{Subscription, Unheard, WorkProcessInstances};
 use runtime::plane::Remote;
 use runtime::plane::remote::{Clustered, Follows};
 use xcore::Clock;
@@ -346,6 +346,10 @@ impl OperatorSurface for ListenerSurface {
 
     fn dead_messages(&self) -> Vec<DeadMessage> {
         self.read().dead_messages.clone()
+    }
+
+    fn work_process_instances(&self) -> Vec<WorkProcessInstances> {
+        self.read().publication.work_process_instances.clone()
     }
 
     fn failed_messages(&self, scope: &str, from: u64, most: u32) -> FailedMessageList {

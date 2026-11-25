@@ -146,6 +146,12 @@ public sealed class SnapshotOperator(string path) : IOperatorSurface, IDisposabl
     }
 
     /// <inheritdoc />
+    public WorkProcessInstanceList WorkProcessInstances()
+    {
+        return held.Read().WorkProcessInstances;
+    }
+
+    /// <inheritdoc />
     public DeadMessageOperation Act(
         DeadMessageRecord message, DeadMessageAct act, string who, HeldCaller? caller)
     {

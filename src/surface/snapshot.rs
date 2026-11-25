@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use observe::topology::from_to::FromTo;
 use observe::{Act, Count, Counted, DeadMessage, EventSubscription, HealthRecord, Noun};
-use observe::{Subscription, Unheard};
+use observe::{Subscription, Unheard, WorkProcessInstances};
 use xcore::Clock;
 use xcore::lock::Locked;
 
@@ -247,6 +247,10 @@ impl OperatorSurface for SnapshotSurface {
 
     fn dead_messages(&self) -> Vec<DeadMessage> {
         self.read().dead_messages.clone()
+    }
+
+    fn work_process_instances(&self) -> Vec<WorkProcessInstances> {
+        self.read().publication.work_process_instances.clone()
     }
 
     fn failed_messages(&self, scope: &str, from: u64, most: u32) -> FailedMessageList {

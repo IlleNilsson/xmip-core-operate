@@ -6,13 +6,16 @@
 
 use abi::ffi::{Str, status};
 use abi::operate::words::{list, list_word};
-use observe::{DeadMessage, EventSubscription, PauseState, Subscription, Unheard};
+use observe::{
+    DeadMessage, EventSubscription, PauseState, Subscription, Unheard, WorkProcessInstances,
+};
 use serde_json::{Value, json};
 
 use crate::ffi::rule::fill;
 use crate::ffi::text::answer;
 use crate::surface::dead_message_query::{self, DeadMessageQuery};
 use crate::surface::event_subscription_query::{self, EventSubscriptionQuery};
+use crate::surface::instance_query::{self, InstanceQuery};
 use crate::surface::subscription_query::{self, SubscriptionQuery};
 
 /// `xmip_list_query_v1`: the list `entries` (`XMIP_LIST_*`, its section's
@@ -84,6 +87,27 @@ fn chosen(which: i32, entries: &Value, query: &Value) -> Result<Value, String> {
             };
             Ok(json!({ "places": asked.places(&each(entries, "dead_messages", dead_message))? }))
         }
+        list::INSTANCES => {
+            let asked = InstanceQuery {
+                location: text("location"),
+                work_process: text("work_process"),
+                instance: text("instance"),
+            };
+            // Each entry keeps its place: one that does not read is read as
+            // an empty one, never dropped, so no place after it shifts.
+            let lists: Vec<WorkProcessInstances> = entries["work_process_instances"]
+                .as_array()
+                .map(|lists| {
+                    lists
+                        .iter()
+                        .map(|list| serde_json::from_value(list.clone()).unwrap_or_default())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let (places, instances): (Vec<usize>, Vec<Vec<usize>>) =
+                asked.places(&lists).into_iter().unzip();
+            Ok(json!({ "places": places, "instances": instances }))
+        }
         _ => Err(format!("{which} is no list of section 28.3")),
     }
 }
@@ -105,6 +129,7 @@ pub unsafe extern "C" fn xmip_list_columns_v1(
             list::SUBSCRIPTIONS => &subscription_query::COLUMNS,
             list::EVENT_SUBSCRIPTIONS => &event_subscription_query::COLUMNS,
             list::DEAD_MESSAGES => &dead_message_query::COLUMNS,
+            list::INSTANCES => &instance_query::COLUMNS,
             _ => return status::INVALID,
         };
         // SAFETY: per the contract above.

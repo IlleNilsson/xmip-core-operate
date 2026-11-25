@@ -183,6 +183,12 @@ public sealed class GatedOperator(
     }
 
     /// <inheritdoc />
+    public WorkProcessInstanceList WorkProcessInstances()
+    {
+        return inner.WorkProcessInstances();
+    }
+
+    /// <inheritdoc />
     public DeadMessageOperation Act(
         DeadMessageRecord message, DeadMessageAct act, string who, HeldCaller? caller)
     {

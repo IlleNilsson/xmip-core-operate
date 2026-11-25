@@ -178,6 +178,12 @@ public abstract partial class ListenerOperator : IOperatorSurface, IDisposable
     }
 
     /// <inheritdoc />
+    public WorkProcessInstanceList WorkProcessInstances()
+    {
+        return held.Read().WorkProcessInstances;
+    }
+
+    /// <inheritdoc />
     public DeadMessageOperation Act(
         DeadMessageRecord message, DeadMessageAct act, string who, HeldCaller? caller)
     {

@@ -61,6 +61,7 @@ public sealed class RemoteBuildTest
             RuntimeEvents.Entrypoints[0], refused.Message, StringComparison.Ordinal);
         Assert.Throws<InvalidOperationException>(() => Rules.Design);
         Assert.Throws<InvalidOperationException>(() => Rules.Messages);
+        Assert.Throws<InvalidOperationException>(() => Rules.Instances);
     }
 
     [Fact]

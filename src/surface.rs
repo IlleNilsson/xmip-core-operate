@@ -20,6 +20,7 @@ pub mod english;
 pub mod event_subscription_query;
 pub mod failed_message_list;
 pub mod figures;
+pub mod instance_query;
 pub mod list_order;
 pub mod listener;
 pub mod node_capability;
@@ -40,7 +41,7 @@ use std::time::Duration;
 
 use observe::topology::from_to::FromTo;
 use observe::{Act, Count, Counted, DeadMessage, EventSubscription, HealthRecord, Noun};
-use observe::{Subscription, Unheard};
+use observe::{Subscription, Unheard, WorkProcessInstances};
 
 use acted::{Acted, ScopeAction, ScopeOperation, SecretOperation, SecretRecord};
 use failed_message_list::FailedMessageList;
@@ -175,6 +176,13 @@ pub trait OperatorSurface {
 
     /// What the nodes' Dead Message Queues keep.
     fn dead_messages(&self) -> Vec<DeadMessage> {
+        Vec::new()
+    }
+
+    /// The Instances of each Work Process the nodes run, and the Messages
+    /// that failed in its queue (`runtime-model.md` section 22; open problem
+    /// 192).
+    fn work_process_instances(&self) -> Vec<WorkProcessInstances> {
         Vec::new()
     }
 

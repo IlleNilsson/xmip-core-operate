@@ -142,6 +142,8 @@ public sealed partial class RuntimeRules
             library, RuntimeDeadMessages.Entrypoints, () => new RuntimeDeadMessages(library));
         Messages = Node(
             library, RuntimeMessages.Entrypoints, () => new RuntimeMessages(library));
+        Instances = Node(
+            library, RuntimeInstances.Entrypoints, () => new RuntimeInstances(library));
         Databases = Node(
             library, RuntimeDatabases.Entrypoints, () => new RuntimeDatabases(library));
         Reports = Node(library, RuntimeReports.Entrypoints, () => new RuntimeReports(library));
