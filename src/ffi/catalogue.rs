@@ -1,7 +1,9 @@
 //! `xmip_operate.h` section 12: the technologies this runtime carries and the
 //! settings each declares (ADR-0064, amendment 2026-09-26). The export only —
 //! what it answers is `runtime::catalogue`'s, and each declaration is its
-//! technology's own.
+//! technology's own: every technology's, gathered and carried once in the
+//! process (`crate::catalogue`, amendment 2026-11-26), beside what a node
+//! here loaded.
 //!
 //! In `ffi/`, the one folder of this crate that may hold unsafe code
 //! (ADR-0050, amendment 2026-11-16): it reads the name a surface handed over
@@ -45,6 +47,7 @@ unsafe fn technology_catalogue(
         return status::MALFORMED;
     };
 
+    crate::catalogue::carried();
     let (code, text) = match catalogue::catalogue(technology) {
         Ok(answer) => (status::OK, answer),
         Err(refusal) => (status::INVALID, refusal),
@@ -106,5 +109,52 @@ mod tests {
         };
         assert_eq!(code, status::INVALID);
         assert!(String::from_utf8_lossy(&refusal[..needed]).contains(name));
+    }
+
+    /// The whole catalogue as a surface asks it: its length, then itself.
+    fn whole() -> serde_json::Value {
+        let every = Str {
+            ptr: std::ptr::null(),
+            len: 0,
+        };
+        let mut needed = 0usize;
+        // SAFETY: a null buffer of capacity 0 asks for the length only.
+        unsafe { xmip_technology_catalogue_v1(every, std::ptr::null_mut(), 0, &raw mut needed) };
+        let mut buffer = vec![0u8; needed];
+        // SAFETY: `buffer` has room for `needed` bytes.
+        let code = unsafe {
+            xmip_technology_catalogue_v1(every, buffer.as_mut_ptr(), buffer.len(), &raw mut needed)
+        };
+        assert_eq!(code, status::OK);
+        serde_json::from_slice(&buffer).expect("the catalogue is JSON")
+    }
+
+    #[test]
+    fn every_technology_gathered_is_answered_though_no_node_here_loaded_it() {
+        let whole = whole();
+        // The side a technology's setting applies on, as the catalogue says it.
+        let applies = |technology: &str, setting: &str| {
+            whole["technologies"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|carried| carried["technology"] == technology)
+                .and_then(|carried| carried["settings"].as_array())
+                .into_iter()
+                .flatten()
+                .find(|declared| declared["name"] == setting)
+                .map(|declared| declared["applies"].clone())
+        };
+
+        assert_eq!(
+            applies("xmip-core-transport-aws-s3", "access_key_id"),
+            Some(serde_json::json!("both")),
+            "{whole}"
+        );
+        assert_eq!(
+            applies("xmip-core-transport-file", "name"),
+            Some(serde_json::json!("send")),
+            "{whole}"
+        );
     }
 }

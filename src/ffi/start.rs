@@ -1,6 +1,8 @@
 //! `xmip_operate.h` section 6: starting and validating a node, from a
 //! surface. The exports only — what starting and validating are is
-//! `runtime::start`'s.
+//! `runtime::start`'s, each Location held to every technology's declaration,
+//! carried once in the process (`crate::catalogue`; ADR-0064, amendment
+//! 2026-11-26).
 //!
 //! In `ffi/`, the one folder of this crate that may hold unsafe code
 //! (ADR-0050, amendment 2026-11-16): each reads text a surface handed over and
@@ -29,6 +31,7 @@ pub unsafe extern "C" fn xmip_start_v1(path: Str) -> i32 {
             return status::MALFORMED;
         };
 
+        crate::catalogue::carried();
         if start_published(text) {
             status::OK
         } else {
@@ -61,6 +64,7 @@ pub unsafe extern "C" fn xmip_validate_v1(
             return status::MALFORMED;
         };
 
+        crate::catalogue::carried();
         let problems = validate(text);
         // SAFETY: `report` has room for `cap` bytes and `out_len` is
         // writable per the contract.
@@ -84,5 +88,35 @@ mod tests {
         // and the language server calls through that same declaration.
         let _: abi::operate::StartFn = xmip_start_v1;
         let _: abi::operate::ValidateFn = xmip_validate_v1;
+    }
+
+    #[test]
+    fn a_locations_settings_are_held_to_its_technologys_declaration_no_node_here_loaded() {
+        let cluster = configure::fixture::test_cluster();
+        let node = &cluster.node(0).name;
+        let configuration = format!(
+            "[service]\nname = \"xmip-{node}\"\ncluster_name = \"{}\"\nnode_name = \"{node}\"\n\n\
+             [[send_locations]]\nname = \"billing-out\"\naddress = \"C:/out\"\n\
+             [send_locations.settings]\nnamed = \"{{message}}.edi\"\n",
+            cluster.name
+        );
+        let given = Str {
+            ptr: configuration.as_ptr(),
+            len: configuration.len(),
+        };
+        let mut report = vec![0u8; 4096];
+        let mut needed = 0usize;
+
+        // SAFETY: `given` borrows the configuration for the call, and
+        // `report` has room for its length.
+        let code =
+            unsafe { xmip_validate_v1(given, report.as_mut_ptr(), report.len(), &raw mut needed) };
+
+        let said = String::from_utf8_lossy(&report[..needed.min(report.len())]).to_string();
+        assert_eq!(code, status::INVALID, "{said}");
+        assert!(
+            said.contains("xmip-core-transport-file has no setting \"named\""),
+            "{said}"
+        );
     }
 }

@@ -18,6 +18,8 @@ pub mod audit_read;
 #[cfg(feature = "node")]
 pub mod authority;
 #[cfg(feature = "node")]
+pub mod catalogue;
+#[cfg(feature = "node")]
 pub mod certificate;
 #[cfg(feature = "node")]
 pub mod database;

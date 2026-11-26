@@ -31,6 +31,12 @@ unsafe_code = "deny"
 # calls is the runtime's, and this crate holds the exports alone. The runtime
 # never depends on this one (ADR-0058, amendment 2026-11-16).
 runtime = { package = "xmip-core-runtime", git = "https://github.com/IlleNilsson/xmip-core-runtime", branch = "main", default-features = false }
+# Every technology's declaration, gathered, none of their code (ADR-0064,
+# amendment 2026-11-26): carried into the runtime's catalogue before an
+# export reads it, so every surface suggests and checks a Location's
+# settings by them. A platform service depends on no technology, so the
+# runtime cannot gather them (`catalogue`).
+declaration = { package = "xmip-core-declaration", git = "https://github.com/IlleNilsson/xmip-core-declaration", branch = "main", optional = true }
 abi = { package = "xmip-core-abi", git = "https://github.com/IlleNilsson/xmip-core-abi", branch = "main" }
 xcore = { package = "xmip-core", git = "https://github.com/IlleNilsson/xmip-core", branch = "main" }
 node = { package = "xmip-core-node", git = "https://github.com/IlleNilsson/xmip-core-node", branch = "main" }
@@ -135,12 +141,15 @@ default = ["node"]
 # across an air gap (`ffi::authority`), and section 25, every Report listed
 # and a Quest probing a node's configuration (`ffi::report`), and section
 # 26, a module library probed through the runtime's one loader
-# (`ffi::module_probe`, `runtime/loader`); and the designer (`design`).
-# Everything a remote surface has, too.
+# (`ffi::module_probe`, `runtime/loader`); and the designer (`design`);
+# and every technology's declaration, which sections 6 and 12 carry into
+# the runtime's catalogue (`catalogue`). Everything a remote surface has,
+# too.
 node = [
     "remote",
     "runtime/node",
     "runtime/loader",
+    "dep:declaration",
     "dep:serde",
     "dep:xevent",
     "xcluster/delivery",
