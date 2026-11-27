@@ -1,11 +1,11 @@
 [package]
 name = "xmip-core-operate"
-version = "0.1.0"
-edition = "2024"
-license = "AGPL-3.0-or-later"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
 repository = "https://github.com/IlleNilsson/xmip-core-operate"
 description = "What every operator surface calls, implemented once: the C ABI's operating exports over the runtime, xmip_operate.h, in the native library the surfaces load, and the designer's view and edits of cluster.xmip."
-publish = false
+publish.workspace = true
 
 [lib]
 path = "src/lib.rs"
