@@ -97,7 +97,7 @@ mod tests {
         let mut handle = core::ptr::null_mut();
         let mut buffer = vec![0u8; 8192];
         let mut length = 0usize;
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: every pointer is this test's own, alive for the call.
         let read = unsafe {
             xmip_publication_read_v1(
                 borrow(&text),
@@ -114,7 +114,7 @@ mod tests {
             String::from_utf8_lossy(&buffer[..length])
         );
         let scope = format!("{}/send/Out", cluster.node_scope(2));
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: as above.
         let code = unsafe {
             xmip_publication_from_to_v1(
                 handle,

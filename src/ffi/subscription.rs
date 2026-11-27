@@ -157,7 +157,7 @@ mod tests {
         let mut buffer = vec![0u8; 64 * 1024];
         let mut length = 0usize;
         let node = node();
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: every pointer is this test's own, alive for the call.
         let code = unsafe {
             xmip_subscriptions_v1(
                 borrow(&node),
@@ -234,7 +234,7 @@ mod tests {
 
         let mut buffer = vec![0u8; 64 * 1024];
         let mut length = 0usize;
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: as above.
         let code = unsafe {
             xmip_subscriptions_v1(
                 borrow(&node),
@@ -266,7 +266,7 @@ mod tests {
         let mut handle = core::ptr::null_mut();
         let mut buffer = vec![0u8; 4096];
         let mut length = 0usize;
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: as above.
         let read = unsafe {
             xmip_publication_read_v1(
                 borrow(&text),
@@ -277,7 +277,7 @@ mod tests {
             )
         };
         assert_eq!(read, status::OK);
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: as above.
         let code = unsafe {
             xmip_publication_subscriptions_v1(
                 handle,
@@ -288,7 +288,7 @@ mod tests {
         };
         assert_eq!(code, status::OK);
         let list: Value = serde_json::from_slice(&buffer[..length]).expect("JSON");
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: as above.
         unsafe { xmip_publication_free_v1(handle) };
         assert_eq!(
             list.get("orders"),

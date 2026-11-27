@@ -212,7 +212,7 @@ mod tests {
         );
         let mut buffer = vec![0u8; 1024];
         let mut length = 0usize;
-        // SAFETY: every pointer is this test's own string or buffer, alive for the call.
+        // SAFETY: every pointer is this test's own, alive for the call.
         let code = unsafe {
             xmip_instances_v1(
                 borrow(&node),
