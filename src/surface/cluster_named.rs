@@ -1,11 +1,13 @@
 //! How every surface shows a cluster where it shows its name (ADR-0028,
-//! amendment 2026-11-28): the short name its file declares, where the
-//! publisher says one, else the name its run gives it; and the tooltip
-//! beside it, which carries the file's name, the short name, the run's name
-//! and the file (the owner, 2026-11-28: *Also all UI need to use tooltips
-//! for explanation and underlying information*). Said here once: the
-//! command line, the PowerShell module and every GUI ask this rule, Rust to
-//! Rust or through `xmip_cluster_said_v1`.
+//! amendments 2026-11-28): the short name its file declares, where the
+//! publisher says one, else the cluster's name; and the tooltip beside it,
+//! which carries the file's name, the short name where it is not the
+//! cluster's name, the cluster's name and the file (the owner, 2026-11-28:
+//! *Also all UI need to use tooltips for explanation and underlying
+//! information*). The cluster's name is the one its file declares
+//! (`configure::cluster::cluster_name`), its short name where it declares
+//! no other. Said here once: the command line, the PowerShell module and
+//! every GUI ask this rule, Rust to Rust or through `xmip_cluster_said_v1`.
 
 use std::path::Path;
 
@@ -13,12 +15,12 @@ use observe::Naming;
 
 use crate::surface::OperatorSurface;
 
-/// A cluster as a surface names it: the name its run gives it and how its
-/// publisher names it for a person.
+/// A cluster as a surface names it: the name its file declares and its
+/// publisher says, and how its publisher names it for a person.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ClusterNamed {
-    /// The cluster's name, as its run gives it: `-Cluster`, or a machine's
-    /// `--cluster`.
+    /// The cluster's name, as its file declares it and its publisher says
+    /// it, or a machine's `--cluster` where the file declares none.
     pub name: String,
     pub naming: Naming,
 }
@@ -57,8 +59,9 @@ impl ClusterNamed {
     }
 
     /// The tooltip beside it, each part the publisher said, joined by ` · `:
-    /// the file's name, which is the cluster's full name, the short name,
-    /// the name the run gives it and the file. Empty where nothing is said.
+    /// the file's name, which is the cluster's full name, the short name
+    /// where it is not the cluster's name, the cluster's name and the file.
+    /// Empty where nothing is said.
     #[must_use]
     pub fn title(&self) -> String {
         let file = self.naming.file.as_str();
@@ -70,8 +73,9 @@ impl ClusterNamed {
         if !full.is_empty() {
             parts.push(full);
         }
-        if !self.naming.short_name.is_empty() {
-            parts.push(format!("short name {}", self.naming.short_name));
+        let short = self.naming.short_name.as_str();
+        if !short.is_empty() && short != self.name {
+            parts.push(format!("short name {short}"));
         }
         if !self.name.is_empty() {
             parts.push(format!("cluster {}", self.name));
@@ -119,5 +123,16 @@ mod tests {
         assert_eq!(bare.shown(), cluster.name);
         assert_eq!(bare.title(), format!("cluster {}", cluster.name));
         assert_eq!(ClusterNamed::default().title(), "");
+
+        // The test cluster's file names it by its short name: said once.
+        let own = named(&cluster.name, &cluster.name, "test/x/a-file.xmip");
+        assert_eq!(own.shown(), cluster.name);
+        assert_eq!(
+            own.title(),
+            format!(
+                "a-file · cluster {} · from test/x/a-file.xmip",
+                cluster.name
+            )
+        );
     }
 }

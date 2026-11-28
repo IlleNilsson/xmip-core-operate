@@ -452,7 +452,7 @@ answer even when it lists none; *Unlisted* is a source that cannot list;
   `Get-XmipHealth -Follow` / `Get-XmipScope -Follow` run it.
 - **What a cluster is called.** `ClusterNamed` for how every surface shows
   a cluster: the short name the publication's `[cluster]` says, else the
-  name its run gives it, and the tooltip beside it, the runtime's
+  cluster's name its file declares, and the tooltip beside it, the runtime's
   `surface::cluster_named` asked through `xmip_cluster_said_v1` (ADR-0028,
   amendment 2026-11-28).
 - **What a run says.** `RunHeader` for the `[run]` table a publisher writes,
@@ -609,11 +609,13 @@ surface does not trust and no certificate at all are each refused — the
 hub's role gate, where an Observer host refuses every act, an Operator host
 takes each as the certificate's subject, and an act without one is refused,
 from loopback as from elsewhere, over
-the test cluster's names from `test/cluster.xmip` (`TestCluster`) — and where a
-host may bind. It tests no rule the runtime owns: it proves the surface returns what
-the runtime's export returns, and those rules are tested once, where they are
-written. `dotnet test dotnet/Xmip.Surface.Test` runs them, after `cargo build`
-in this repository has left the library the test assemblies load.
+the test cluster's names from the Reference Environment, `TestCluster.Read`,
+and a second cluster's from `TestCluster.ReadOther`, derived from its name —
+and where a host may bind. It tests no rule the runtime owns: it proves the
+surface returns what the runtime's export returns, and those rules are
+tested once, where they are written. `dotnet test
+dotnet/Xmip.Surface.Test` runs them, after `cargo build` in this repository
+has left the library the test assemblies load.
 
 A .NET test's folder is `TestFolder` (`dotnet/Xmip.Surface.Test/TestFolder.cs`),
 the one helper every .NET test project that makes one links, as it links

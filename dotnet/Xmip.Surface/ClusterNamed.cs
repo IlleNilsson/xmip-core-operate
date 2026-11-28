@@ -6,16 +6,17 @@ namespace Xmip.Surface;
 
 /// <summary>
 /// A cluster as every surface shows it where it shows its name (ADR-0028,
-/// amendment 2026-11-28): <see cref="Shown"/>, the short name its file
-/// declares, else the name its run gives it, and <see cref="Title"/>, the
-/// tooltip beside it, carrying the file's name, the short name, the run's
-/// name and the file (the owner, 2026-11-28: <i>Also all UI need to use
-/// tooltips for explanation and underlying information</i>). Both are the
-/// runtime's (<c>operate::surface::cluster_named</c>, asked through
-/// <c>xmip_cluster_said_v1</c>), so the command line, the PowerShell module
-/// and every GUI say one thing.
+/// amendments 2026-11-28): <see cref="Shown"/>, the short name its file
+/// declares, else its name, and <see cref="Title"/>, the tooltip beside it,
+/// carrying the file's name, the short name where it is not the cluster's
+/// name, the cluster's name and the file (the owner, 2026-11-28: <i>Also all
+/// UI need to use tooltips for explanation and underlying information</i>).
+/// Both are the runtime's (<c>operate::surface::cluster_named</c>, asked
+/// through <c>xmip_cluster_said_v1</c>), so the command line, the PowerShell
+/// module and every GUI say one thing.
 /// </summary>
-/// <param name="Name">The cluster's name, as its run gives it.</param>
+/// <param name="Name">The cluster's name, as its file declares it and its
+/// publisher says it.</param>
 /// <param name="Naming">How its publisher names it for a person.</param>
 public sealed record ClusterNamed(string Name, PublishedNaming Naming)
 {

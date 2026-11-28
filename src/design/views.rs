@@ -32,7 +32,9 @@ use configure::section::{ApplicationSection, SECTIONS};
 /// What a cluster's file is, view by view.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Views {
-    /// The cluster's `[service] cluster_name`; empty when it names none.
+    /// The cluster's name its file declares, its `[service] cluster_name`
+    /// or else its short name (`configure::cluster::cluster_name`); empty
+    /// when it declares neither.
     pub cluster: String,
     /// The short name the file declares, `[service] short_name`, which a
     /// designer shows for the cluster; empty when it declares none that
@@ -144,12 +146,10 @@ impl Views {
             .map(|(kind, title, reads)| view(kind, title, reads, &table, &containers))
             .collect();
         Ok(Self {
-            cluster: table
-                .get("service")
-                .and_then(|service| service.get("cluster_name"))
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_string(),
+            cluster: configure::cluster::cluster_name(cluster)
+                .ok()
+                .flatten()
+                .unwrap_or_default(),
             short_name: configure::service::short_name(cluster)
                 .ok()
                 .flatten()
@@ -454,6 +454,12 @@ receive_idle = "30s"
         assert_eq!(
             (views.short_name.as_str(), views.cluster.is_empty()),
             ("Ab", false)
+        );
+        // A file declaring no cluster_name names its cluster by its short name.
+        let short = Views::of("[service]\nshort_name = \"Ab\"\n").expect("reads");
+        assert_eq!(
+            (short.cluster.as_str(), short.short_name.as_str()),
+            ("Ab", "Ab")
         );
     }
 
