@@ -117,6 +117,12 @@ public abstract partial class ListenerOperator : IOperatorSurface, IDisposable
     }
 
     /// <inheritdoc />
+    public PublishedNaming Naming()
+    {
+        return held.Read().Naming;
+    }
+
+    /// <inheritdoc />
     public string Root()
     {
         return held.Read().Root;

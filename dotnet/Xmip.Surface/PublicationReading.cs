@@ -23,6 +23,11 @@ internal sealed record PublicationReading(
     /// Empty where it names no one.</summary>
     public string Said { get; init; } = string.Empty;
 
+    /// <summary>How the publication names its cluster for a person: the
+    /// short name its file declares and the file, each empty where it does
+    /// not say.</summary>
+    public PublishedNaming Naming { get; init; } = PublishedNaming.None;
+
     /// <summary>
     /// What every view asks of a publication, asked once, here: the run's
     /// line, the tree at the root and at the publication's own, its nodes
@@ -77,6 +82,7 @@ internal sealed record PublicationReading(
             copied.WorkProcessInstances)
         {
             Said = read.Said,
+            Naming = copied.Naming,
         };
     }
 }

@@ -30,39 +30,39 @@ unsafe_code = "deny"
 # The node and the surface the exports answer for: every rule an export
 # calls is the runtime's, and this crate holds the exports alone. The runtime
 # never depends on this one (ADR-0058, amendment 2026-11-16).
-runtime = { package = "xmip-core-runtime", git = "https://github.com/IlleNilsson/xmip-core-runtime", branch = "main", default-features = false }
+runtime = { workspace = true, default-features = false }
 # Every technology's declaration, gathered, none of their code (ADR-0064,
 # amendment 2026-11-26): carried into the runtime's catalogue before an
 # export reads it, so every surface suggests and checks a Location's
 # settings by them. A platform service depends on no technology, so the
 # runtime cannot gather them (`catalogue`).
-declaration = { package = "xmip-core-declaration", git = "https://github.com/IlleNilsson/xmip-core-declaration", branch = "main", optional = true }
-abi = { package = "xmip-core-abi", git = "https://github.com/IlleNilsson/xmip-core-abi", branch = "main" }
-xcore = { package = "xmip-core", git = "https://github.com/IlleNilsson/xmip-core", branch = "main" }
-node = { package = "xmip-core-node", git = "https://github.com/IlleNilsson/xmip-core-node", branch = "main" }
-observe = { package = "xmip-core-observe", git = "https://github.com/IlleNilsson/xmip-core-observe", branch = "main" }
+declaration = { workspace = true, optional = true }
+abi = { workspace = true }
+xcore = { workspace = true }
+node = { workspace = true }
+observe = { workspace = true }
 # Section 9: a program's audit record, forwarded to the capability that owns
 # it (ADR-0062). xaudit, as xcore, because the export's own file is ffi/audit.rs.
-xaudit = { package = "xmip-core-audit", git = "https://github.com/IlleNilsson/xmip-core-audit", branch = "main" }
+xaudit = { workspace = true }
 # What this library hands audit as the program a .NET program audits
 # through (ffi/audit.rs, program): the file sink, and the operating system's
 # log for when audit cannot persist, the Windows Event Log or the local
 # syslog. Each log's crate is empty off its own platform, so each is a
 # dependency of its own platform alone, in the target tables below (ADR-0062,
 # amendment 2026-11-19).
-audit-file = { package = "xmip-core-audit-file", git = "https://github.com/IlleNilsson/xmip-core-audit-file", branch = "main" }
+audit-file = { workspace = true }
 # Section 11: Events, subscribed from any language: the Event and its
 # filter are the event crate's (ADR-0065). xevent, as xaudit, because the
 # export's own file is ffi/event.rs.
-xevent = { package = "xmip-core-event", git = "https://github.com/IlleNilsson/xmip-core-event", branch = "main", optional = true }
+xevent = { workspace = true, optional = true }
 # The process's hub section 11 forwards to, the cluster's `delivery`
 # (ADR-0065, amendment 2026-11-13), which comes with `node`; a remote build
 # links no hub.
-xcluster = { package = "xmip-core-cluster", git = "https://github.com/IlleNilsson/xmip-core-cluster", branch = "main", default-features = false, optional = true }
+xcluster = { workspace = true, default-features = false, optional = true }
 # Section 27: every configuration document a surface reads, writes or
 # edits, the phone's own among them, is read by configure, the runtime's one
 # reader (ADR-0031, amendment 2026-11-17), so a remote build links it too.
-configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main" }
+configure = { workspace = true }
 # Section 10 hands the designer's views and edits to its language server as
 # JSON, in memory only (ADR-0031 clause 2, ADR-0064).
 serde = { version = "1", features = ["derive"], optional = true }
@@ -75,58 +75,59 @@ toml_edit = { version = "0.25.19", features = ["serde"], optional = true }
 # A Subscription, its filter and where it routes are route's, read here from
 # an Xmip Application and never modelled again (ADR-0064); a filter is one
 # line of Xmip's expression language, and the designer's rows are a view of
-# its compiled tree, never a second grammar (ADR-0066).
-route = { package = "xmip-core-route", git = "https://github.com/IlleNilsson/xmip-core-route", branch = "main", optional = true }
-path = { package = "xmip-core-path", git = "https://github.com/IlleNilsson/xmip-core-path", branch = "main", optional = true }
+# its compiled tree, never a second grammar (ADR-0066); the language is a
+# capability of its own (ADR-0066, amendment 2026-11-28).
+route = { workspace = true, optional = true }
+expression = { workspace = true, optional = true }
 # An Event subscriber's identity and the gate's decision on it (section 11),
 # and the authenticated identity a role check takes (section 18).
-context = { package = "xmip-core-context", git = "https://github.com/IlleNilsson/xmip-core-context", branch = "main", optional = true }
-authorize = { package = "xmip-core-authorize", git = "https://github.com/IlleNilsson/xmip-core-authorize", branch = "main", optional = true }
+context = { workspace = true, optional = true }
+authorize = { workspace = true, optional = true }
 # Section 24: the scripts IT runs for a database server, written by Xmip
 # Storage's schema.
-persist = { package = "xmip-core-persist", git = "https://github.com/IlleNilsson/xmip-core-persist", branch = "main", optional = true }
-secret = { package = "xmip-core-secret", git = "https://github.com/IlleNilsson/xmip-core-secret", branch = "main", optional = true }
-tls = { package = "xmip-core-library-tls", git = "https://github.com/IlleNilsson/xmip-core-library-tls", branch = "main" }
+persist = { workspace = true, optional = true }
+secret = { workspace = true, optional = true }
+tls = { workspace = true }
 # A person's certificate (ADR-0034, amendment 2026-10-15): the request a
 # surface makes — the phone's build too — and, on a node's, the signing by
 # the authority `[provision.operator]` names; the cluster's authority kept in
 # a folder (section 23).
-provision = { package = "xmip-core-provision", git = "https://github.com/IlleNilsson/xmip-core-provision", branch = "main" }
+provision = { workspace = true }
 # An authority's PEM (section 23), and the wide string a test names a
 # library to Windows by (`codec::wide`).
-codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main", optional = true }
+codec = { workspace = true, optional = true }
 
 # The operating system's log of each platform (ffi/audit.rs, program).
 [target.'cfg(windows)'.dependencies]
-audit-windows-event-log = { package = "xmip-core-audit-windows-event-log", git = "https://github.com/IlleNilsson/xmip-core-audit-windows-event-log", branch = "main" }
+audit-windows-event-log = { workspace = true }
 
 [target.'cfg(unix)'.dependencies]
-audit-syslog = { package = "xmip-core-audit-syslog", git = "https://github.com/IlleNilsson/xmip-core-audit-syslog", branch = "main" }
+audit-syslog = { workspace = true }
 
 [dev-dependencies]
 # The runtime's fixtures, the gates' stand-ins and the test authority
 # (`fixture`), which the exports' tests run a node with. Without the default
 # features, so a remote build's tests stay a remote build
 # (`--no-default-features --features remote`).
-runtime = { package = "xmip-core-runtime", git = "https://github.com/IlleNilsson/xmip-core-runtime", branch = "main", default-features = false, features = ["test-support"] }
+runtime = { workspace = true, default-features = false, features = ["test-support"] }
 # The test cluster's names, from its `cluster.xmip` (`configure::fixture`;
 # ADR-0056, amendment 2026-10-03): no test writes a cluster or node name.
-configure = { package = "xmip-core-configure", git = "https://github.com/IlleNilsson/xmip-core-configure", branch = "main", features = ["test-support"] }
+configure = { workspace = true, features = ["test-support"] }
 # A folder of a test's own (`file::temporary::Folder`; ADR-0021, amendment
 # 2026-11-19).
-file = { package = "xmip-core-library-file", git = "https://github.com/IlleNilsson/xmip-core-library-file", branch = "main", features = ["test-support"] }
+file = { workspace = true, features = ["test-support"] }
 # The folder of a test whose Event subscriptions audit in it, removed once
 # audit's keeper kept their records (`audit_file::temporary`; ADR-0065,
 # amendment 2026-11-20).
-audit-file = { package = "xmip-core-audit-file", git = "https://github.com/IlleNilsson/xmip-core-audit-file", branch = "main", features = ["test-support"] }
+audit-file = { workspace = true, features = ["test-support"] }
 # The wide string a test of a pinned library names it to Windows by
 # (`codec::wide`), in a remote build too.
-codec = { package = "xmip-core-library-codec", git = "https://github.com/IlleNilsson/xmip-core-library-codec", branch = "main" }
+codec = { workspace = true }
 # The Party an Event gate's test admits (`ffi::event::gate`), and the
 # authenticated identity a role check's test holds, in a remote build too
 # (`ffi::security_role`).
-party = { package = "xmip-core-party", git = "https://github.com/IlleNilsson/xmip-core-party", branch = "main" }
-context = { package = "xmip-core-context", git = "https://github.com/IlleNilsson/xmip-core-context", branch = "main" }
+party = { workspace = true }
+context = { workspace = true }
 
 [features]
 # A node and every surface on a machine that runs one.
@@ -155,7 +156,7 @@ node = [
     "xcluster/delivery",
     "dep:toml_edit",
     "dep:route",
-    "dep:path",
+    "dep:expression",
     "dep:context",
     "dep:authorize",
     "dep:persist",

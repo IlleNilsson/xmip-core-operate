@@ -21,7 +21,7 @@ module's library (ADR-0057).
 | `operator` | The operator a surface's table stands for: the snapshot it answers from, what it last handed out, and what this process published — `start_published`, a node's plan, the first three startup phases, which `xmip_start_v1` publishes |
 | `design` | The designer's view of `cluster.xmip`, artifact by artifact (`views`), an Xmip Application's routes (`routes`), a filter's rows and its text (`filter`), every edit (`edit`, `view_edit`), what an editor suggests, looks up and renames by (`keys`, `shape`, `written`, `references`, `offered`), and each node's slice, signed by the cluster's authority: the JSON section 10 hands the language server and the Operation Desktop, in memory only (ADR-0064; ADR-0031 clause 2). What a document means — its reading, binding and slicing — is xmip-core-configure's |
 | `wire` | The header's integers for the crates' enums, in both directions, converted here and nowhere else |
-| `surface` | What every screen, command and cmdlet reads, once in Rust (ADR-0052 clause 1; ADR-0014, amendment 2026-11-17): the `OperatorSurface` trait, over a published snapshot (`snapshot`, followed by the runtime's directory watch) or a node's operate listener here or on another machine (`listener`, over `runtime::plane::Remote`), chosen by the line over the host's document (`choice`, read by `configure::document`, in the words `choice::table` holds, which also writes the `cli.toml` `xmip-service --install` leaves beside the programs, stating the node it installed); the scope tree a publication is (`scope_index`, `scope_tree`), its rows (`scope_item`), what an argument selects (`scope_selection`), the six figures (`figures`), the English (`english`), the run and a node's declaration (`run_header`, `node_capability`), a validation's verdict (`configuration_verdict`), the three noun queries and the one order they sort by (`subscription_query`, `event_subscription_query`, `dead_message_query`, `list_order`), the Messages that failed (`failed_message_list`) and what came of an act (`acted`). The command line calls it Rust to Rust |
+| `surface` | What every screen, command and cmdlet reads, once in Rust (ADR-0052 clause 1; ADR-0014, amendment 2026-11-17): the `OperatorSurface` trait, over a published snapshot (`snapshot`, followed by the runtime's directory watch) or a node's operate listener here or on another machine (`listener`, over `runtime::plane::Remote`), chosen by the line over the host's document (`choice`, read by `configure::document`, in the words `choice::table` holds, which also writes the `cli.toml` `xmip-service --install` leaves beside the programs, stating the node it installed); the scope tree a publication is (`scope_index`, `scope_tree`), its rows (`scope_item`), what an argument selects (`scope_selection`), the six figures (`figures`), the English (`english`), the run and a node's declaration (`run_header`, `node_capability`), how a cluster is shown and its tooltip (`cluster_named`), a validation's verdict (`configuration_verdict`), the three noun queries and the one order they sort by (`subscription_query`, `event_subscription_query`, `dead_message_query`, `list_order`), the Messages that failed (`failed_message_list`) and what came of an act (`acted`). The command line calls it Rust to Rust |
 | `audit_read`, `authority`, `certificate`, `database`, `module_probe` | What an export answers by, outside the boundary: the audit read back by its one reader, the cluster's authority's acts, a person's request signed, the database scripts written, and a probe's answer as its JSON — each the one the command line calls and the export forwards to |
 | `catalogue` | Every technology's declaration [xmip-core-declaration](https://github.com/IlleNilsson/xmip-core-declaration) gathers — the names, settings, kinds and words, none of the code — carried into the runtime's catalogue once in the process (`carried`), before section 6 validates or plans a node and section 12 answers the catalogue (ADR-0064, amendment 2026-11-26). The runtime depends on no technology, so the library the surfaces load links them through the gathering crate; a node's build alone (`node`) |
 
@@ -34,7 +34,7 @@ be set on it (`offered`, the runtime handing in its `[tuning]` declaration
 and the role words through `Views::offering`), an Application's routes as a
 graph (`routes`), a filter's rows and groups as a view of its compiled
 expression (`filter`; the filter itself is one line of Xmip's expression
-language, `xmip-core-path`'s `expression`, compiled as the Application is
+language, `xmip-core-expression`'s, compiled as the Application is
 read, ADR-0066), and every compiled unit the file's modules declare. `edit`
 makes an Application's edits to the text in place, and `view_edit` the
 designer's — `add-element` adding one element to an array of unnamed
@@ -450,6 +450,11 @@ answer even when it lists none; *Unlisted* is a source that cannot list;
   one whenever the publication advances and the answer changed, a wildcard
   matched again at every notice, until cancelled — `xmip --follow` and
   `Get-XmipHealth -Follow` / `Get-XmipScope -Follow` run it.
+- **What a cluster is called.** `ClusterNamed` for how every surface shows
+  a cluster: the short name the publication's `[cluster]` says, else the
+  name its run gives it, and the tooltip beside it, the runtime's
+  `surface::cluster_named` asked through `xmip_cluster_said_v1` (ADR-0028,
+  amendment 2026-11-28).
 - **What a run says.** `RunHeader` for the `[run]` table a publisher writes,
   `NodeCapability` for what one node declared — its roles, and the stages they
   serve — never inferred from what the node is called (ADR-0056 clause 1),

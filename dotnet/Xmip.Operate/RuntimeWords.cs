@@ -37,6 +37,8 @@ public sealed partial class RuntimeWords
     private readonly delegate* unmanaged[Cdecl]<
         XmipStr, XmipStr, byte*, nuint, nuint*, int> _capabilitySaid;
     private readonly delegate* unmanaged[Cdecl]<
+        XmipStr, XmipStr, byte*, nuint, nuint*, int> _clusterSaid;
+    private readonly delegate* unmanaged[Cdecl]<
         int, XmipStr, XmipStr, byte*, nuint, nuint*, int> _listQuery;
     private readonly delegate* unmanaged[Cdecl]<int, XmipStr*, nuint, nuint*, int> _listColumns;
     private readonly delegate* unmanaged[Cdecl]<
@@ -77,6 +79,7 @@ public sealed partial class RuntimeWords
             library, OperateAbi.ValidatedEntrypoint);
         _runSaid = RuntimeDesign.Export(library, OperateAbi.RunSaidEntrypoint);
         _capabilitySaid = RuntimeDesign.Export(library, OperateAbi.CapabilitySaidEntrypoint);
+        _clusterSaid = RuntimeDesign.Export(library, OperateAbi.ClusterSaidEntrypoint);
         _listQuery = (delegate* unmanaged[Cdecl]<int, XmipStr, XmipStr, byte*, nuint, nuint*, int>)
             Export(library, OperateAbi.ListQueryEntrypoint);
         _listColumns = (delegate* unmanaged[Cdecl]<int, XmipStr*, nuint, nuint*, int>)Export(
@@ -120,6 +123,7 @@ public sealed partial class RuntimeWords
         OperateAbi.ValidatedEntrypoint,
         OperateAbi.RunSaidEntrypoint,
         OperateAbi.CapabilitySaidEntrypoint,
+        OperateAbi.ClusterSaidEntrypoint,
         OperateAbi.ListQueryEntrypoint,
         OperateAbi.ListColumnsEntrypoint,
         OperateAbi.ListWordsEntrypoint,

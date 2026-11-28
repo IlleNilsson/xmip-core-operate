@@ -10,7 +10,7 @@
 //! (`publishes`), a Subscription routes a match to its destination
 //! (`routes`), and a Send Port Group gathers its Send Ports (`gathers`).
 
-use path::expression::OPERATORS;
+use expression::OPERATORS;
 use route::Subscriber;
 use serde::Serialize;
 
@@ -26,7 +26,7 @@ pub struct Routes {
     /// What is wrong with the design, one sentence each; drawn as it is.
     pub problems: Vec<String>,
     /// The operators a filter row offers: the expression language's own
-    /// (`path::expression::OPERATORS`).
+    /// (`expression::OPERATORS`).
     pub operators: Vec<&'static str>,
     /// The kinds a compared value is read as, [`filter::kinds`].
     pub kinds: Vec<&'static str>,

@@ -123,6 +123,14 @@ public sealed partial class RuntimeWords
         return Answered(_capabilitySaid, declaration, string.Empty);
     }
 
+    /// <summary>A cluster, as its JSON — <c>name</c>, <c>short_name</c>,
+    /// <c>file</c> — said: what a surface shows for it and the tooltip beside
+    /// it (<c>operate::surface::cluster_named</c>).</summary>
+    public string ClusterSaid(string cluster)
+    {
+        return Answered(_clusterSaid, cluster, string.Empty);
+    }
+
     /// <summary>The places in <paramref name="entries"/> — the list
     /// <paramref name="list"/> as its section's JSON — that
     /// <paramref name="query"/> chooses, in its order; throws

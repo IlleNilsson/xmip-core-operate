@@ -124,6 +124,12 @@ public sealed class GatedOperator(
     }
 
     /// <inheritdoc />
+    public PublishedNaming Naming()
+    {
+        return inner.Naming();
+    }
+
+    /// <inheritdoc />
     public NodeCapability Capability(string node)
     {
         return inner.Capability(node);

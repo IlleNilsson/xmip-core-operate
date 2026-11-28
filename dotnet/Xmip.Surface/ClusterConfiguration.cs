@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using Xmip.Operate;
 
 namespace Xmip.Surface;
 
@@ -61,6 +62,11 @@ public sealed class ClusterConfiguration
     /// <summary>The cluster's name, as its <c>[service]</c> says; empty when
     /// it says none.</summary>
     public string Name => Views.Cluster;
+
+    /// <summary>The cluster as every surface shows it: the short name the
+    /// file declares, else its name, with the tooltip carrying this file
+    /// (ADR-0028, amendment 2026-11-28).</summary>
+    public ClusterNamed Named => new(Name, new PublishedNaming(Views.ShortName, Path));
 
     /// <summary>The nodes the file declares, as the runtime lists them.</summary>
     public IReadOnlyList<string> Nodes =>

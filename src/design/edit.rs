@@ -10,7 +10,7 @@
 //! writes TOML itself; it sends one of these and shows the text that comes
 //! back.
 
-use path::expression::Expression;
+use expression::Expression;
 use route::Subscriber;
 use serde::{Deserialize, Serialize};
 use toml_edit::{ArrayOfTables, Item, Table, value};

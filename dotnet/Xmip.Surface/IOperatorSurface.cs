@@ -196,6 +196,17 @@ public partial interface IOperatorSurface
     }
 
     /// <summary>
+    /// How the cluster behind this surface is named for a person, where its
+    /// publisher says: the short name the cluster's file declares and that
+    /// file (ADR-0028, amendment 2026-11-28). <see cref="PublishedNaming.None"/>
+    /// where it says nothing. What a face shows of it is <see cref="ClusterNamed"/>.
+    /// </summary>
+    public PublishedNaming Naming()
+    {
+        return PublishedNaming.None;
+    }
+
+    /// <summary>
     /// What one node declares (ADR-0056) — its roles and its Node
     /// capabilities — by name. What the node
     /// itself published wins; a node the publication holds no capability

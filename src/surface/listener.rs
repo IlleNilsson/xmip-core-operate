@@ -331,6 +331,10 @@ impl OperatorSurface for ListenerSurface {
         self.read().run.clone()
     }
 
+    fn naming(&self) -> observe::Naming {
+        self.read().publication.naming.clone().unwrap_or_default()
+    }
+
     fn watch(&self, stop: &AtomicBool, each: &mut dyn FnMut(&SurfaceChange)) {
         self.follow(stop, each);
     }

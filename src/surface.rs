@@ -14,6 +14,7 @@
 
 pub mod acted;
 pub mod choice;
+pub mod cluster_named;
 pub mod configuration_verdict;
 pub mod dead_message_query;
 pub mod english;
@@ -40,7 +41,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use observe::topology::from_to::FromTo;
-use observe::{Act, Count, Counted, DeadMessage, EventSubscription, HealthRecord, Noun};
+use observe::{Act, Count, Counted, DeadMessage, EventSubscription, HealthRecord, Naming, Noun};
 use observe::{Subscription, Unheard, WorkProcessInstances};
 
 use acted::{Acted, ScopeAction, ScopeOperation, SecretOperation, SecretRecord};
@@ -136,6 +137,12 @@ pub trait OperatorSurface {
     /// What the run was started with, where the publisher says.
     fn run(&self) -> RunHeader {
         RunHeader::default()
+    }
+
+    /// How the cluster is named for a person, where the publisher says: the
+    /// short name its file declares and the file (`cluster_named`).
+    fn naming(&self) -> Naming {
+        Naming::default()
     }
 
     /// What `node` declares: what it published, else what the run started

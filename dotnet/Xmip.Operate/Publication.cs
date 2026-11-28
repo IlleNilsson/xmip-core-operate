@@ -36,7 +36,25 @@ public sealed record Publication(
     EventSubscriptionList EventSubscriptions,
     DeadMessageList DeadMessages,
     FailedMessageList FailedMessages,
-    WorkProcessInstanceList WorkProcessInstances);
+    WorkProcessInstanceList WorkProcessInstances)
+{
+    /// <summary>How its cluster is named for a person, under <c>[cluster]</c>:
+    /// <see cref="PublishedNaming.None"/> where it says nothing.</summary>
+    public PublishedNaming Naming { get; init; } = PublishedNaming.None;
+}
+
+/// <summary>How a publication's cluster is named for a person, as it says it
+/// under <c>[cluster]</c>: <c>observe::Naming</c> (ADR-0028, amendment
+/// 2026-11-28).</summary>
+/// <param name="ShortName">The short name the cluster's file declares; empty
+/// where the publisher does not say it.</param>
+/// <param name="File">The cluster's file, as the publisher names it; empty
+/// where it does not.</param>
+public sealed record PublishedNaming(string ShortName, string File)
+{
+    /// <summary>What a publication that says nothing of it is read as.</summary>
+    public static PublishedNaming None { get; } = new(string.Empty, string.Empty);
+}
 
 /// <summary>What a run was started with, as a publication says it under
 /// <c>[run]</c>: <c>observe::Run</c>.</summary>

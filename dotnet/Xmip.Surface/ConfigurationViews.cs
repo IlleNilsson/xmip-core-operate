@@ -22,6 +22,11 @@ namespace Xmip.Surface;
 public sealed record ConfigurationViews(
     string Cluster, bool IsCluster, IReadOnlyList<ArtifactView> Views)
 {
+    /// <summary>The short name the file declares, <c>[service] short_name</c>,
+    /// which a designer shows for the cluster; empty when it declares none
+    /// (ADR-0028, amendment 2026-11-28).</summary>
+    public string ShortName { get; init; } = string.Empty;
+
     /// <summary>The view of <paramref name="kind"/>, or null where the runtime
     /// answers none.</summary>
     public ArtifactView? Of(string kind)
@@ -65,7 +70,10 @@ public sealed record ConfigurationViews(
         return new ConfigurationViews(
             Text(root, "cluster"),
             Text(root, "document") == "cluster",
-            [.. Items(root, "views").Select(View)]);
+            [.. Items(root, "views").Select(View)])
+        {
+            ShortName = Text(root, "short_name"),
+        };
     }
 
     private static ArtifactView View(JsonElement view)

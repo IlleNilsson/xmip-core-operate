@@ -84,6 +84,12 @@ public sealed class SnapshotOperator(string path) : IOperatorSurface, IDisposabl
     }
 
     /// <inheritdoc />
+    public PublishedNaming Naming()
+    {
+        return held.Read().Naming;
+    }
+
+    /// <inheritdoc />
     public string Root()
     {
         return held.Read().Root;

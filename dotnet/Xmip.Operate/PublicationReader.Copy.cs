@@ -29,7 +29,10 @@ public sealed partial class PublicationReader
                 EventSubscriptionList.Parse(Listed(_eventSubscriptions, handle)),
                 DeadMessageList.Parse(Listed(_deadMessages, handle)),
                 FailedMessageList.Parse(Listed(_failedMessages, handle)),
-                WorkProcessInstanceList.Parse(Listed(_instances, handle)));
+                WorkProcessInstanceList.Parse(Listed(_instances, handle)))
+            {
+                Naming = new PublishedNaming(head.ShortName.Read(), head.ClusterFile.Read()),
+            };
         }
     }
 

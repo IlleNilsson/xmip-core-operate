@@ -137,6 +137,7 @@ impl Read {
         let publication = &self.publication;
         let run = publication.run.as_ref();
         let topology = publication.topology.as_ref();
+        let naming = publication.naming.as_ref();
         PublicationHead {
             source: borrow(&publication.source),
             node: borrow(&publication.node),
@@ -146,6 +147,8 @@ impl Read {
             has_topology: u8::from(topology.is_some()),
             topology_source: topology.map_or(Str::empty(), |drawn| borrow(&drawn.source)),
             topology_observed_unix_nanos: topology.map_or(0, |drawn| drawn.observed_unix_nanos),
+            short_name: naming.map_or(Str::empty(), |named| borrow(&named.short_name)),
+            cluster_file: naming.map_or(Str::empty(), |named| borrow(&named.file)),
         }
     }
 }
@@ -405,6 +408,10 @@ mod tests {
 source = "System Tests — {scope}"
 node = "{scope}"
 
+[cluster]
+short_name = "Ab"
+file = "c/a.xmip"
+
 [[records]]
 scope = "{scope}/node/{first}/receive/tcp"
 state = "done"
@@ -543,6 +550,8 @@ attempts = 2
             has_topology: 9,
             topology_source: Str::empty(),
             topology_observed_unix_nanos: 0,
+            short_name: Str::empty(),
+            cluster_file: Str::empty(),
         };
         // SAFETY: a live handle; `head` is writable.
         assert_eq!(
@@ -551,6 +560,10 @@ attempts = 2
         );
         assert_eq!(text(head.node), cluster.scope());
         assert_eq!((head.has_run, text(head.stress)), (1, "harsh".to_string()));
+        assert_eq!(
+            (text(head.short_name), text(head.cluster_file)),
+            ("Ab".to_string(), "c/a.xmip".to_string())
+        );
         assert_eq!(
             (head.has_topology, head.topology_observed_unix_nanos),
             (1, 5)

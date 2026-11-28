@@ -230,6 +230,10 @@ impl OperatorSurface for SnapshotSurface {
         self.read().run.clone()
     }
 
+    fn naming(&self) -> observe::Naming {
+        self.read().publication.naming.clone().unwrap_or_default()
+    }
+
     fn watch(&self, stop: &AtomicBool, each: &mut dyn FnMut(&SurfaceChange)) {
         self.following.fetch_add(1, Ordering::AcqRel);
         crate::surface::snapshot_watch::watch(self, stop, each);

@@ -1,12 +1,12 @@
 //! A Subscription's filter as a designer edits it (ADR-0064): rows and
 //! groups, a view of the compiled expression.
 //!
-//! The filter is one line of Xmip's expression language
-//! (`path::expression`, ADR-0066), compiled when the Application is
+//! The filter is one line of Xmip's expression language (`xmip-core-expression`,
+//! ADR-0066, amendment 2026-11-28), compiled when the Application is
 //! read; nothing here parses or prints it. What is here is the classic filter
 //! dialog over it: **rows** of property, operator and value, gathered in And
 //! and Or groups, with Not around any of them. [`structure`] and [`rows`] give
-//! a filter's rows; [`expression`] and [`text`] turn rows back into the tree
+//! a filter's rows; [`expression()`] and [`text`] turn rows back into the tree
 //! and its canonical line. A designer edits rows of words without writing
 //! the language, and the text is rewritten — into the one canonical form —
 //! only when the designer changes it; reading never reformats a line a
@@ -14,11 +14,11 @@
 //!
 //! Every condition the language has is a row (ADR-0066 clause 3): its left
 //! operand is the row's property, written in the language; its operator is
-//! one of the language's [`path::expression::OPERATORS`]; its value is a literal
+//! one of the language's [`expression::OPERATORS`]; its value is a literal
 //! of one of [`kinds`], or — kind `expression` — anything the language can
 //! write there, such as another name or the list an `in` holds.
 
-use path::expression::{Comparison, Condition, Expression, KINDS, Operand, Value};
+use expression::{Comparison, Condition, Expression, KINDS, Operand, Value};
 use serde::{Deserialize, Serialize};
 
 /// The row kind whose value is written in the expression language itself:
@@ -178,7 +178,7 @@ fn row(property: &str, operator: &str, value: &str, kind: &str) -> Result<Condit
             "a condition '{operator} {value}' requires a property"
         ));
     }
-    let left = language(property, path::expression::operand)?;
+    let left = language(property, expression::operand)?;
     let right = || compared(property, value, kind);
     let negated = operator.starts_with("not ");
 
@@ -195,7 +195,7 @@ fn row(property: &str, operator: &str, value: &str, kind: &str) -> Result<Condit
     Ok(match operator {
         "like" | "not like" => {
             let (pattern, escape) = if kind == EXPRESSION {
-                language(value, path::expression::pattern)?
+                language(value, expression::pattern)?
             } else {
                 (right()?, None)
             };
@@ -209,7 +209,7 @@ fn row(property: &str, operator: &str, value: &str, kind: &str) -> Result<Condit
         "in" | "not in" => Condition::In {
             value: left,
             list: if kind == EXPRESSION {
-                language(value, path::expression::operands)?
+                language(value, expression::operands)?
             } else {
                 vec![right()?]
             },
@@ -219,7 +219,7 @@ fn row(property: &str, operator: &str, value: &str, kind: &str) -> Result<Condit
         other => {
             return Err(format!(
                 "'{other}' is not an operator; a condition takes one of {}",
-                path::expression::OPERATORS.join(", ")
+                expression::OPERATORS.join(", ")
             ));
         }
     })
@@ -228,7 +228,7 @@ fn row(property: &str, operator: &str, value: &str, kind: &str) -> Result<Condit
 /// A row's value: a literal read as its kind, or the language's own text.
 fn compared(property: &str, value: &str, kind: &str) -> Result<Operand, String> {
     if kind == EXPRESSION {
-        language(value, path::expression::operand)
+        language(value, expression::operand)
     } else {
         Value::read(property, value, kind).map(Operand::Literal)
     }

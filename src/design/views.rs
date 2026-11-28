@@ -34,6 +34,10 @@ use configure::section::{ApplicationSection, SECTIONS};
 pub struct Views {
     /// The cluster's `[service] cluster_name`; empty when it names none.
     pub cluster: String,
+    /// The short name the file declares, `[service] short_name`, which a
+    /// designer shows for the cluster; empty when it declares none that
+    /// reads (ADR-0028, amendment 2026-11-28).
+    pub short_name: String,
     pub views: Vec<View>,
     /// Where each table and key is written, what names what, and every key
     /// a table may hold: what an editor looks up and suggests by.
@@ -146,6 +150,11 @@ impl Views {
                 .and_then(Value::as_str)
                 .unwrap_or_default()
                 .to_string(),
+            short_name: configure::service::short_name(cluster)
+                .ok()
+                .flatten()
+                .map(String::from)
+                .unwrap_or_default(),
             views,
             written: crate::design::written::written(cluster)?,
             references: crate::design::references::references(cluster)?,
@@ -434,6 +443,18 @@ receive_idle = "30s"
             .iter()
             .map(|entry| format!("{} | {}", entry.section.join("."), entry.scope))
             .collect()
+    }
+
+    #[test]
+    fn the_views_say_the_short_name_the_file_declares() {
+        let (text, _, _) = written();
+        assert_eq!(Views::of(&text).expect("reads").short_name, "");
+        let named = text.replace("[service]\n", "[service]\nshort_name = \"Ab\"\n");
+        let views = Views::of(&named).expect("reads");
+        assert_eq!(
+            (views.short_name.as_str(), views.cluster.is_empty()),
+            ("Ab", false)
+        );
     }
 
     #[test]
